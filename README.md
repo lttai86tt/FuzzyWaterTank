@@ -1,4 +1,4 @@
-make all<p align="center">
+<p align="center">
     <picture>
         <source media="(prefers-color-scheme: dark)" srcset="./assets/SVG/Dark-Logo.svg">
         <source media="(prefers-color-scheme: light)" srcset="./assets/SVG/Bright-Logo.svg">
@@ -43,17 +43,28 @@ FuzzyRule rules[] = {
 ## example
 
 Find working examples in the `./example` directory:
+
+```bash
+
+Make sure to install the latest gcc, cmake
+Linux: Should be installed from source, should not from APT
+
+```
 ```bash
 cd example
-make all
+make all (Linix)
+mingw32-make all (Windown)
+#stop
+make clean
+mingw32-make clean
 #then run
-./out/minimal
+./out/minimal.out
 #and
-./out/TecFanController
+./out/TecFanController.out
 ```
 ```
-Usage: ./out/minmal <value>
-Usage: ./out/TecFanControl <currentTemperature> <currentTemperatureChange> <currentTECPower> <currentFan>
+Usage: ./out/minmal.out <value>
+Usage: ./out/TecFanControl.out <currentTemperature> <currentTemperatureChange> <currentTECPower> <currentFan>
 ```
 You can then plot a simple surface of the fan controller example using the provided python script:
 ```bash
