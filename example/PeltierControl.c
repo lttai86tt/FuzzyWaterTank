@@ -9,13 +9,18 @@
 
 #include "fuzzyc.h"
 
-#include <WiringPi.h>
+#include "unistd.h"
+#include "wiringPi.h"
 #include <math.h>
+#include "softPwm.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-#define COOLER_PIN 23
-#define HEATER_PIN 26
+#define PWM_RANGE    70
+#define COOLER_PIN   23
+#define HEATER_PIN   24
+#define SENSOR_PATH  "/sys/bus/w1/devices/28-3ce1d4434496/w1_slave"
 
 // Define the labels for the fuzzy sets (only used for debugging)
 
@@ -37,53 +42,47 @@ FuzzySet_t PelCoolerSpeed; // Toc do cua may lam mat
 FuzzySet_t PelHeaterSpeed; // Toc do cua may lam nong
 
 // Helper function to map a value from one range to another
-double map_range(double value, double in_min, double in_max, double out_min, double out_max) {
+double map_range(double value, double in_min, double in_max, double out_min,
+                 double out_max) {
     double mapped =
         (value - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
     return fmin(fmax(mapped, out_min), out_max);
 }
 
 // Read sensor temperature
-double get_Temperature() {
+double get_Temperature(const char *sensor_path) {
 
-    const char *sensor_temperature =
-        "/sys/bus/w1/devices/28-3ce1d4434496/w1_slave";
     FILE *fp;
     char buf[256];
     char *temp_str;
-    double temp;
+    double temperature = -1.0;
 
-    if ((fp = fopen(sensor_temperature, "r")) == NULL) {
+    fp = fopen(sensor_path, "r");
+    if (fp == NULL) {
         perror("Failed to open sensor file");
         return -1;
     }
 
-    if (fread(buf, sizeof(char), 256, fp) < 1) {
-        perror("Failed to read sensor file");
-        fclose(fp);
-        return -1;
+    // Read the file contents
+    while (fgets(buf, sizeof(buf), fp) != NULL) {
+        // Find "t=" in the string
+        if ((temp_str = strstr(buf, "t=")) != NULL) {
+            // Convert to float (temp in millidegree Celsius)
+            temperature = atof(temp_str + 2) / 1000.0;
+            break;
+        }
     }
 
     fclose(fp);
-
-    if ((temp_str = strstr(buf, "t=")) == NULL) {
-        fprintf(stderr, "Failed to find temperature in sensor file\n");
-        return -1;
-    }
-
-    temp_str += 2;
-    temp = strtof(temp_str, NULL);
-    return temp / 1000;
+    return temperature;
 }
 
-void setCoolerSpeed(double speed) {
-    int pwm = map_range(speed, 0, 100, 0, 1023);
-    pwmWrite(COOLER_PIN, pwm);
+void setPeltierCoolPower(int coolerPower) {
+    softPwmWrite(COOLER_PIN, coolerPower);
 }
 
-void setHeaterSpeed(double speed) {
-    int pwm = map_range(speed, 0, 100, 0, 1023);
-    pwmWrite(HEATER_PIN, pwm);
+void setPeltierHeatPower(int heaterPower){
+    softPwmWrite(HEATER_PIN, heaterPower);
 }
 
 // Define the membership functions for the fuzzy sets
@@ -118,7 +117,6 @@ DEFINE_FUZZY_MEMBERSHIP(PeltierCoolerSpeedMembershipFunctions)
     X(PELTIER_HEATER_SPEED_MEDIUM, 15.0, 25.0, 30.0, 40.0, TRAPEZOIDAL)        \
     X(PELTIER_HEATER_SPEED_FAST, 35.0, 45.0, 70.0, 70.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierHeaterSpeedMembershipFunctions)
-
 // Define the fuzzy rules
 /*
     >> NEED TO DEFINE THE RULES FOR THE SYSTEM <<
@@ -127,17 +125,15 @@ FuzzyRule_t rules[] = {
 
     // Rule 1:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_FAST),
-                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_FAST)),
 
     // Rule 2:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF),
-                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_FAST)),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
 
     // Rule 3:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH)),
-                    ANY_OF(VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
+                     ANY_OF(VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_MEDIUM)),
 
     // Rule 4:
@@ -151,8 +147,7 @@ FuzzyRule_t rules[] = {
     // Rule 6:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF),
-                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
     // Rule 7:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
@@ -184,26 +179,23 @@ void destroyClassifiers() {
 
 int main(int argc, char *argv[]) {
 
-    if (wiringPiSetup() == -1) {
-        printf("Can not initialize WiringPi!\n");
+    if (wiringPiSetupGpio() == -1) {
+        printf("WiringPi setup failed!\n");
         return 1;
     }
     double currentTemperature = 0.0;
     double currentTemperatureChange = 0.0;
-
-    pinMode(COOLER_PIN, PWM_OUTPUT);
-    pinMode(HEATER_PIN, PWM_OUTPUT);
-    pwmSetMode(PWM_MODE_MS);
-    pwmSetClock(192);
+    softPwmCreate(COOLER_PIN, 0, PWM_RANGE);
+    softPwmCreate(HEATER_PIN, 0, PWM_RANGE);
 
     while (1) {
 
         if (currentTemperature == 0.0) {
-            currentTemperature = get_Temperature();
+            currentTemperature = get_Temperature(SENSOR_PATH);
             currentTemperatureChange = 0.0;
         } else {
-            currentTemperatureChange = currentTemperature - get_Temperature();
-            currentTemperature = get_Temperature();
+            currentTemperatureChange = currentTemperature - get_Temperature(SENSOR_PATH);
+            currentTemperature = get_Temperature(SENSOR_PATH);
         }
 
         if (argc <= 2) {
@@ -215,12 +207,12 @@ int main(int argc, char *argv[]) {
             currentTemperature = atof(argv[1]);
             currentTemperatureChange = atof(argv[2]);
         }
-        FuzzyClasssiefer(currentTemperature, &TemperatureState);
-        FuzzyClasssiefer(currentTemperatureChange, &TempChangeState);
+        FuzzyClassifier(currentTemperature, &TemperatureState);
+        FuzzyClassifier(currentTemperatureChange, &TempChangeState);
         printf("Temperature %.04f degC\n", currentTemperature);
         printf("Temp Change %.04f degC/30sec\n", currentTemperatureChange);
 
-        fuzzyIneference(rules, (sizeof(rules) / sizeof(rules[0])));
+        fuzzyInference(rules, (sizeof(rules) / sizeof(rules[0])));
 
         printClassifier(&PelCoolerSpeed, peltierSpeedLabels);
         printClassifier(&PelHeaterSpeed, peltierSpeedLabels);
@@ -228,9 +220,9 @@ int main(int argc, char *argv[]) {
         double output_cooler = defuzzification(&PelCoolerSpeed);
         double output_heater = defuzzification(&PelHeaterSpeed);
 
-        setCoolerSpeed(output_cooler);
+        setPeltierCoolPower(output_cooler);
         printf("Cooler Speed: %0.4f: \n", output_cooler);
-        setHeaterSpeed(output_heater);
+        setPeltierHeatPower(output_heater);
         printf("Heater Speed: %0.4f: \n", output_heater);
 
         FuzzySetFree(&TemperatureState);
