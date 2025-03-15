@@ -198,15 +198,9 @@ int main(int argc, char *argv[]) {
             currentTemperature = get_Temperature(SENSOR_PATH);
         }
 
-        if (argc <= 2) {
-            printf(
-                "Usage: %s <currentTemperature> <currentTemperatureChange>\n",
-                argv[0]);
-            return 1;
-        } else {
-            currentTemperature = atof(argv[1]);
-            currentTemperatureChange = atof(argv[2]);
-        }
+        //allocate memory
+        createClassifiers();
+
         FuzzyClassifier(currentTemperature, &TemperatureState);
         FuzzyClassifier(currentTemperatureChange, &TempChangeState);
         printf("Temperature %.04f degC\n", currentTemperature);
@@ -225,14 +219,9 @@ int main(int argc, char *argv[]) {
         setPeltierHeatPower(output_heater);
         printf("Heater Speed: %0.4f: \n", output_heater);
 
-        FuzzySetFree(&TemperatureState);
-        FuzzySetFree(&TempChangeState);
-        FuzzySetFree(&PelHeaterSpeed);
-        FuzzySetFree(&PelCoolerSpeed);
-
         destroyClassifiers();
 
-        delay(15000); // Delay 30s
+        delay(3000); // Delay 30s
         // vTaskDelay(30000 / portTICK_PERIOD_MS);   //Delay 30s
     }
     return 0;

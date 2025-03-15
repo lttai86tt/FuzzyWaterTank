@@ -49,6 +49,7 @@ Find working examples in the `./example` directory:
 Make sure to install the latest gcc, cmake
 Linux(Raspbian): Should be installed from source, should not from APT
 Add the Debian Testing or Unstable repository to update to the latest GCC version
+
 ```bash
 # Backup current repository 
 sudo cp /etc/apt/sources.list /etc/apt/sources.list.backup
@@ -79,7 +80,7 @@ make clean
 mingw32-make clean
 
 #then run
-./out/minimal.out
+./out/PeltierControl.out
 #and
 ./out/TecFanController.out
 ```
