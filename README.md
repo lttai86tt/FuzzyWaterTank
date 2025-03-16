@@ -81,8 +81,8 @@ mingw32-make clean
 
 #then run
 ./out/PeltierControl.out
-#and
-./out/TecFanController.out
+#stop
+Ctrl + C 
 ```
 ```
 Usage: ./out/minmal.out <value>

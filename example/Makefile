@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -I../inc -O3
-LDFLAGS= -lwiringPi
+LDFLAGS= -lwiringPi -lmosquitto
 SOURCES=$(wildcard ../src/*.c)
 OBJECTS=$(notdir $(SOURCES:.c=.o))
 HEADERS=$(wildcard ../inc/*.h)
