@@ -1,29 +1,35 @@
 /**
  * @file PeltierControl.c
  *
- * To-Do:  3 Days
- * 1. Define the fuzzy sets for the input and output
- * 2. Define the fuzzy rules for the system
- * 3. Configuration Control Output PWM for Peltier Cooler and Heater
+ * To-Do:  
+ * 1. update fuzzy rule
+ * 2. testing mqtt broker
+ * 3. try use generation graph by python
  */
 
 #include "fuzzyc.h"
-
+#include "mosquitto.h"
+#include "softPwm.h"
 #include "unistd.h"
 #include "wiringPi.h"
+
 #include <math.h>
-#include "softPwm.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define PWM_RANGE    70
-#define COOLER_PIN   23
-#define HEATER_PIN   24
-#define SENSOR_PATH  "/sys/bus/w1/devices/28-3ce1d4434496/w1_slave"
+// Sensor and PWM
+#define PWM_RANGE 70
+#define COOLER_PIN 23
+#define HEATER_PIN 24
+#define SENSOR_PATH "/sys/bus/w1/devices/28-3ce1d4434496/w1_slave"
+
+// MQTT Broker
+#define BROKER_ADDRESS "192.168.1.17" // Raspberry Pi's IP
+#define PORT 1883
+#define TOPIC "fuzzytank/topic"
 
 // Define the labels for the fuzzy sets (only used for debugging)
-
 const char *tempLabels[] = {"Cool", "Normal",
                             "Hot"}; // Lanh <> Binh thuong <> Nong
 const char *changeLabels[] = {"Dec", "Stable",
@@ -81,7 +87,7 @@ void setPeltierCoolPower(int coolerPower) {
     softPwmWrite(COOLER_PIN, coolerPower);
 }
 
-void setPeltierHeatPower(int heaterPower){
+void setPeltierHeatPower(int heaterPower) {
     softPwmWrite(HEATER_PIN, heaterPower);
 }
 
@@ -93,27 +99,27 @@ void setPeltierHeatPower(int heaterPower){
    // RECTANGULAR: Chu Nhat
 */
 #define TemperatureMembershipFunctions(X)                                      \
-    X(TEMPERATURE_LOW, 0.0, 18.0, 24.0, TRIANGULAR)                      \
-    X(TEMPERATURE_MEDIUM, 18.0, 24.0, 35.0, TRIANGULAR)                   \
+    X(TEMPERATURE_LOW, 0.0, 18.0, 24.0, TRIANGULAR)                            \
+    X(TEMPERATURE_MEDIUM, 18.0, 24.0, 35.0, TRIANGULAR)                        \
     X(TEMPERATURE_HIGH, 24.0, 35.0, 100.0, 100.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TemperatureMembershipFunctions)
 
 #define TempChangeMembershipFunctions(X)                                       \
-    X(TEMP_CHANGE_DECREASING, -20.0, -20.0, -2.0, 0.0, TRAPEZOIDAL)                 \
-    X(TEMP_CHANGE_STABLE, -2.0, 0.0, 2.0, 0.0, TRIANGULAR)                      \
+    X(TEMP_CHANGE_DECREASING, -20.0, -20.0, -2.0, 0.0, TRAPEZOIDAL)            \
+    X(TEMP_CHANGE_STABLE, -2.0, 0.0, 2.0, 0.0, TRIANGULAR)                     \
     X(TEMP_CHANGE_INCREASING, 0.0, 2.0, 20.0, 20.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TempChangeMembershipFunctions)
 //
 #define PeltierCoolerSpeedMembershipFunctions(X)                               \
-    X(PELTIER_COOLER_SPEED_OFF, -20.0, -10.0, 0.0, 10.0, RECTANGULAR)           \
-    X(PELTIER_COOLER_SPEED_SLOW, 00.0, 7.0, 15.0, 25.0, TRAPEZOIDAL)          \
+    X(PELTIER_COOLER_SPEED_OFF, -20.0, -10.0, 0.0, 10.0, RECTANGULAR)          \
+    X(PELTIER_COOLER_SPEED_SLOW, 00.0, 7.0, 15.0, 25.0, TRAPEZOIDAL)           \
     X(PELTIER_COOLER_SPEED_MEDIUM, 15.0, 25.0, 30.0, 40.0, TRAPEZOIDAL)        \
     X(PELTIER_COOLER_SPEED_FAST, 35.0, 45.0, 70.0, 70.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierCoolerSpeedMembershipFunctions)
 
 #define PeltierHeaterSpeedMembershipFunctions(X)                               \
     X(PELTIER_HEATER_SPEED_OFF, -20.0, -10.0, 0.0, 0.0, RECTANGULAR)           \
-    X(PELTIER_HEATER_SPEED_SLOW, 00.0, 7.0, 15.0, 25.0, TRAPEZOIDAL)          \
+    X(PELTIER_HEATER_SPEED_SLOW, 00.0, 7.0, 15.0, 25.0, TRAPEZOIDAL)           \
     X(PELTIER_HEATER_SPEED_MEDIUM, 15.0, 25.0, 30.0, 40.0, TRAPEZOIDAL)        \
     X(PELTIER_HEATER_SPEED_FAST, 35.0, 45.0, 70.0, 70.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierHeaterSpeedMembershipFunctions)
@@ -177,8 +183,32 @@ void destroyClassifiers() {
     FuzzySetFree(&PelHeaterSpeed);
 }
 
-int main(int argc, char *argv[]) {
+int main() {
+    // MQTT initialization
+    struct mosquitto *mosq;
+    mosquitto_lib_init();
+    mosq = mosquitto_new("Publisher", true, NULL);
+    if (!mosq) {
+        printf("Error: Can not initialization mosquitto client\n");
+        return 1;
+    }
 
+    // // Connected to MQTT Broker
+    // if (mosquitto_connect(mosq, BROKER_ADDRESS, PORT, 60)) {
+    //     printf("Error: Can not connect to MQTT broker\n");
+    //     return 1;
+    // }
+
+    // // Send message
+    // mosquitto_publish(mosq, NULL, TOPIC, strlen(MESSAGE), MESSAGE, 1, false);
+    // printf("Sent: %s\n", MESSAGE);
+
+    // // Disconnect and free up memory
+    // mosquitto_disconnect(mosq);
+    // mosquitto_destroy(mosq);
+    // mosquitto_lib_cleanup();
+
+    // wiringPi initialization
     if (wiringPiSetupGpio() == -1) {
         printf("WiringPi setup failed!\n");
         return 1;
@@ -194,11 +224,12 @@ int main(int argc, char *argv[]) {
             currentTemperature = get_Temperature(SENSOR_PATH);
             currentTemperatureChange = 0.0;
         } else {
-            currentTemperatureChange = currentTemperature - get_Temperature(SENSOR_PATH);
+            currentTemperatureChange =
+                currentTemperature - get_Temperature(SENSOR_PATH);
             currentTemperature = get_Temperature(SENSOR_PATH);
         }
 
-        //allocate memory
+        // allocate memory
         createClassifiers();
 
         FuzzyClassifier(currentTemperature, &TemperatureState);
