@@ -243,10 +243,10 @@ int main() {
         printClassifier(&PelHeaterSpeed, peltierSpeedLabels);
 
         double output_cooler = defuzzification(&PelCoolerSpeed);
-        double output_heater = defuzzification(&PelHeaterSpeed);
-
         setPeltierCoolPower(output_cooler);
         printf("Cooler Speed: %0.4f: \n", output_cooler);
+        double output_heater = defuzzification(&PelHeaterSpeed);
+
         setPeltierHeatPower(output_heater);
         printf("Heater Speed: %0.4f: \n", output_heater);
 
