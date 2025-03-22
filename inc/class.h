@@ -1,13 +1,4 @@
-/**
- * @file class.h
- * @brief Fuzzy Logic class header.
- * @author Robin Prilliwtz
- * @date 2024
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * See LICENSE.txt file for details.
- *
- */
+
 
 #ifndef FUZZY_CLASS_H
 #define FUZZY_CLASS_H
