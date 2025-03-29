@@ -1,8 +1,18 @@
-
+/**
+ * @file class.c
+ * @brief Fuzzy Logic inference engine implementation.
+ * @author Robin Prilliwtz
+ * @date 2024
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * See LICENSE.txt file for details.
+ *
+ */
 
 #include "class.h"
 
 #include "membership_function.h"
+#include "defuzzifier.h"
 
 #include <math.h>
 #include <stdio.h>
@@ -43,6 +53,42 @@ void FuzzySetInit(FuzzySet_t *set,
 void FuzzySetFree(FuzzySet_t *set) {
     free(set->membershipValues);
     free(set->membershipFunctions);
+}
+
+/**
+ * Returns the maximum possible value of a FuzzySet_t struct.
+ *
+ * @param set The FuzzySet_t struct to evaluate.
+ */
+double getMaxOutput(FuzzySet_t *set)    {
+    double max = -INFINITY;
+
+    for (int i = 0; i < set->length; i++) {
+        double membershipDegree = calculateCentroid(set->membershipFunctions[i], 1.0);
+        if (membershipDegree > max) {
+            max = membershipDegree;
+        }
+    }
+
+    return max;
+}
+
+/**
+ * Returns the minimum possible value of a FuzzySet_t struct.
+ *
+ * @param set The FuzzySet_t struct to evaluate.
+ */
+double getMinOutput(FuzzySet_t *set)    {
+    double min = INFINITY;
+
+    for (int i = 0; i < set->length; i++) {
+        double membershipDegree = calculateCentroid(set->membershipFunctions[i], 1.0);
+        if (membershipDegree < min) {
+            min = membershipDegree;
+        }
+    }
+
+    return min;
 }
 
 /**

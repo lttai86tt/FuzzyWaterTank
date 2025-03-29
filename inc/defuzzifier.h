@@ -7,6 +7,8 @@
 #include "class.h"
 #include "classifier.h"
 
+double calculateCentroid(MembershipFunction_t function, double membership);
+
 double defuzzification(FuzzySet_t *set);
 
 #endif

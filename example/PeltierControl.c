@@ -2,9 +2,7 @@
  * @file PeltierControl.c
  *
  * To-Do:  
- * 1. update fuzzy rule
- * 2. testing mqtt broker
- * 3. try use generation graph by python
+ * 1 . testing mqtt broker
  */
 
 #include "fuzzyc.h"
@@ -36,8 +34,8 @@ const char *changeLabels[] = {"Dec", "Stable",
                               "Inc"}; // Giam <> On dinh <> Tang
 const char *peltierSpeedLabels[] = {"Off", "Slow", "Medium", "Fast"};
 
-const char *fanLabels[] = {"Off", "On"};                    // UNUSED
-const char *lmhLabels[] = {"Off", "Low", "Medium", "High"}; // UNUSED
+// const char *fanLabels[] = {"Off", "On"};                    // UNUSED
+// const char *lmhLabels[] = {"Off", "Low", "Medium", "High"}; // UNUSED
 
 // Define the input fuzzy sets
 FuzzySet_t TemperatureState; // Trang thai nhiet do
@@ -91,19 +89,19 @@ void setPeltierHeatPower(int heaterPower) {
    // RECTANGULAR: Chu Nhat
 */
 #define TemperatureMembershipFunctions(X)                                      \
-    X(TEMPERATURE_LOW, 0.0, 15.0, 24.0, TRIANGULAR)                            \
-    X(TEMPERATURE_MEDIUM, 20.0, 28.0, 38.0, TRIANGULAR)                        \
+    X(TEMPERATURE_LOW, -10.0, 0.0, 20.0, 28.0, TRAPEZOIDAL)                            \
+    X(TEMPERATURE_MEDIUM, 26.0, 30.0, 38.0, TRIANGULAR)                        \
     X(TEMPERATURE_HIGH, 28.0, 38.0, 100.0, 100.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TemperatureMembershipFunctions)
 
 #define TempChangeMembershipFunctions(X)                                       \
-    X(TEMP_CHANGE_DECREASING, -20.0, -20.0, -2.0, 0.0, TRAPEZOIDAL)            \
-    X(TEMP_CHANGE_STABLE, -2.0, 0.0, 2.0, 0.0, TRIANGULAR)                     \
-    X(TEMP_CHANGE_INCREASING, 0.0, 2.0, 20.0, 20.0, TRAPEZOIDAL)
+    X(TEMP_CHANGE_DECREASING, -50.0, -20.0, -1.0, 0.0, TRAPEZOIDAL)            \
+    X(TEMP_CHANGE_STABLE, -1.0, 0.0, 1.0, 0.0, TRIANGULAR)                     \
+    X(TEMP_CHANGE_INCREASING, 0.0, 1.0, 20.0, 50.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TempChangeMembershipFunctions)
 //
 #define PeltierCoolerSpeedMembershipFunctions(X)                               \
-    X(PELTIER_COOLER_SPEED_OFF, -20.0, 0.0, 0.0, 10.0, RECTANGULAR)          \
+    X(PELTIER_COOLER_SPEED_OFF, -20.0, 0.0, 0.0, 0.0, RECTANGULAR)          \
     X(PELTIER_COOLER_SPEED_SLOW, 00.0, 7.0, 15.0, 25.0, TRAPEZOIDAL)           \
     X(PELTIER_COOLER_SPEED_MEDIUM, 15.0, 25.0, 30.0, 40.0, TRAPEZOIDAL)        \
     X(PELTIER_COOLER_SPEED_FAST, 35.0, 45.0, 70.0, 70.0, TRAPEZOIDAL)
@@ -124,60 +122,83 @@ FuzzyRule_t rules[] = {
     // Rule 1: Temp low and decreasing => Slow
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_FAST),
-                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_FAST)),
 
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
+                VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
+                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
     // Rule 2:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_MEDIUM),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_MEDIUM)),
+
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
+                VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
 
     // Rule 3:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_SLOW),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_SLOW)),
+
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
+                VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
     // Rule 4:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
                             VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_SLOW),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_SLOW)),
+
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
+                VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
     // Rule 5:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
+
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
+                VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_SLOW)),
     // Rule 6:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
+
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
+                           VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
     // Rule 7:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
+
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
+                VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_MEDIUM)),
     // Rule 8: 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF),
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
+                VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_FAST)),
     // Rule 9: 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
+                VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_FAST)),
 };
 
-// Helper function to create the fuzzy classifiers
+// Init the fuzzy classifiers
 void createClassifiers() {
     FuzzySetInit(&TemperatureState, TemperatureMembershipFunctions,
                  FUZZY_LENGTH(TemperatureMembershipFunctions));
     FuzzySetInit(&TempChangeState, TempChangeMembershipFunctions,
                  FUZZY_LENGTH(TempChangeMembershipFunctions));
 
-    //
     FuzzySetInit(&PelCoolerSpeed, PeltierCoolerSpeedMembershipFunctions,
                  FUZZY_LENGTH(PeltierCoolerSpeedMembershipFunctions));
     FuzzySetInit(&PelHeaterSpeed, PeltierHeaterSpeedMembershipFunctions,

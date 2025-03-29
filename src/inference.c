@@ -37,7 +37,7 @@
          // Iterate over each antecedent in the rule
          for (int j = 0; j < rule->num_antecedents; j++) {
              const FuzzyAntecedent_t *antecedent = &rule->antecedent[j];
- 
+
              // Check if the antecedent is an ANY_OF fuzzy_operator
              if (antecedent->fuzzy_operator== FUZZY_ANY_OF) {
                  // Calculate the maximum membership of the variables in the
