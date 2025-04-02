@@ -125,15 +125,16 @@ FuzzyRule_t rules[] = {
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_FAST)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
-                VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
+                           VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
+
     // Rule 2:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_MEDIUM)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
-                VAR(TempChangeState, TEMP_CHANGE_STABLE))),
+                            VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
 
     // Rule 3:
@@ -142,7 +143,7 @@ FuzzyRule_t rules[] = {
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_SLOW)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
-                VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
+                           VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
     // Rule 4:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
@@ -158,7 +159,7 @@ FuzzyRule_t rules[] = {
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
-                VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
+                           VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_SLOW)),
     // Rule 6:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
@@ -175,20 +176,20 @@ FuzzyRule_t rules[] = {
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                 VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
-                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_MEDIUM)),
+                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_SLOW)),
     // Rule 8: 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
-                VAR(TempChangeState, TEMP_CHANGE_STABLE))),
-                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_FAST)),
+                            VAR(TempChangeState, TEMP_CHANGE_STABLE))),
+                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_MEDIUM)),
     // Rule 9: 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
-                VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
+                            VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_FAST)),
 };
 

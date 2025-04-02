@@ -1,3 +1,13 @@
+/**
+ * @file inference.c
+ * @brief Fuzzy Logic inference engine implementation.
+ * @author Robin Prilliwtz
+ * @date 2024
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * See LICENSE.txt file for details.
+ *
+ */
 
  #include "inference.h"
 
@@ -23,8 +33,9 @@
  void fuzzyInference(const FuzzyRule_t *rules, int numRules) {
      // Initialize the output memberships of the consequent to 0
      for (int i = 0; i < numRules; i++) {
-         rules[i].consequents->variable->membershipValues[rules[i].consequents->value] = 0.0;
- 
+         rules[i]
+             .consequent.variable->membershipValues[rules[i].consequent.value] =
+             0.0;
      }
  
      // Iterate over each rule
@@ -37,7 +48,7 @@
          // Iterate over each antecedent in the rule
          for (int j = 0; j < rule->num_antecedents; j++) {
              const FuzzyAntecedent_t *antecedent = &rule->antecedent[j];
-
+ 
              // Check if the antecedent is an ANY_OF fuzzy_operator
              if (antecedent->fuzzy_operator== FUZZY_ANY_OF) {
                  // Calculate the maximum membership of the variables in the
@@ -112,14 +123,16 @@
  
          // Update the output membership with the maximum of the current
          // membership and the calculated membership
-         rules[i].consequents->variable->membershipValues[rules[i].consequents->value] =
-         fmax(rules[i].consequents->variable->membershipValues[rules[i].consequents->value],
-              membership);
-     
+         rules[i]
+             .consequent.variable->membershipValues[rules[i].consequent.value] =
+             fmax(rules[i]
+                      .consequent.variable
+                      ->membershipValues[rules[i].consequent.value],
+                  membership);
      }
  
      // Normalize the output membership
      for (int i = 0; i < numRules; i++) {
-         normalizeClass(rules[i].consequents->variable);
+         normalizeClass(rules[i].consequent.variable);
      }
  }
