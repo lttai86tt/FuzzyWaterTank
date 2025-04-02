@@ -17,25 +17,26 @@
 #include <string.h>
 
 // Sensor and PWM
-#define PWM_RANGE  70
-#define COOLER_PIN 23
-#define HEATER_PIN 24
+#define PWM_RANGE   70
+#define COOLER_PIN  23
+#define HEATER_PIN  24
 #define SENSOR_PATH "/sys/bus/w1/devices/28-3ce1d4434496/w1_slave"
 
 // MQTT Broker
-#define BROKER_ADDRESS "192.168.1.17" // Raspberry Pi's IP
-#define PORT 1883
-#define TOPIC "fuzzytank/topic"
+#define MQTT_HOST   ""  //"tcp://broker.hivemq.com:1883"
+#define CLIENTID    "WaterTank_Publisher"
+#define QOS         1
+#define MQTT_PORT   1883
+#define TIMEOUT     10000L
 
+#define TOPIC_TEMP              "watertank/temp"
+#define TOPIC_TEMP_CHANGE       "watertank/temp_change"
+#define TOPIC_PELTIER_COOL      "watertank/cooler"
+#define TOPIC_PELTIER_HEAT      "watertank/heater"
 // Define the labels for the fuzzy sets (only used for debugging)
-const char *tempLabels[] = {"Cool", "Normal",
-                            "Hot"}; // Lanh <> Binh thuong <> Nong
-const char *changeLabels[] = {"Dec", "Stable",
-                              "Inc"}; // Giam <> On dinh <> Tang
+const char *tempLabels[] = {"Cool", "Normal", "Hot"}; // Lanh <> Binh thuong <> Nong
+const char *changeLabels[] = {"Dec", "Stable", "Inc"}; // Giam <> On dinh <> Tang
 const char *peltierSpeedLabels[] = {"Off", "Slow", "Medium", "Fast"};
-
-// const char *fanLabels[] = {"Off", "On"};                    // UNUSED
-// const char *lmhLabels[] = {"Off", "Low", "Medium", "High"}; // UNUSED
 
 // Define the input fuzzy sets
 FuzzySet_t TemperatureState; // Trang thai nhiet do
@@ -79,6 +80,15 @@ void setPeltierCoolPower(int coolerPower) {
 
 void setPeltierHeatPower(int heaterPower) {
     softPwmWrite(HEATER_PIN, heaterPower);
+}
+
+void publish_message(struct mosquitto *mosq, const char *topic, const char *message) {
+    int ret = mosquitto_publish(mosq, NULL, topic, strlen(message), message, 1, false);
+    if (ret != MOSQ_ERR_SUCCESS) {
+        printf("Send message %s failed: %s\n", topic, mosquitto_strerror(ret));
+    } else {
+        printf("Sent : [%s] %s\n", topic, message);
+    }
 }
 
 // Define the membership functions for the fuzzy sets
@@ -225,20 +235,11 @@ int main() {
         return 1;
     }
 
-    // // Connected to MQTT Broker
-    // if (mosquitto_connect(mosq, BROKER_ADDRESS, PORT, 60)) {
-    //     printf("Error: Can not connect to MQTT broker\n");
-    //     return 1;
-    // }
-
-    // // Send message
-    // mosquitto_publish(mosq, NULL, TOPIC, strlen(MESSAGE), MESSAGE, 1, false);
-    // printf("Sent: %s\n", MESSAGE);
-
-    // // Disconnect and free up memory
-    // mosquitto_disconnect(mosq);
-    // mosquitto_destroy(mosq);
-    // mosquitto_lib_cleanup();
+    // Connected to MQTT Broker
+    if (mosquitto_connect(mosq, MQTT_HOST, MQTT_PORT, 60)) {
+        printf("Error: Can not connect to MQTT broker\n");
+        return 1;
+    }
 
     // wiringPi initialization
     if (wiringPiSetupGpio() == -1) {
@@ -251,7 +252,11 @@ int main() {
     softPwmCreate(HEATER_PIN, 0, PWM_RANGE);
 
     while (1) {
-
+        
+        char temp_msg[50];
+        char temp_change_msg[50];
+        char cooler_msg[50];
+        char heater_msg[50];
         if (currentTemperature == 0.0) {
             currentTemperature = get_Temperature(SENSOR_PATH);
             currentTemperatureChange = 0.0;
@@ -260,6 +265,8 @@ int main() {
             currentTemperature = get_Temperature(SENSOR_PATH);
         }
 
+        sprintf(temp_msg, "%.2f", currentTemperature);
+        sprintf(temp_msg, "%.2f", currentTemperatureChange);
         // allocate memory
         createClassifiers();
 
@@ -279,14 +286,26 @@ int main() {
         double output_heater = defuzzification(&PelHeaterSpeed);
 
         setPeltierCoolPower(output_cooler);
+        sprintf(cooler_msg, "%d", output_cooler);
         printf("Cooler Speed: %0.3f: \n", output_cooler);
         setPeltierHeatPower(output_heater);
+        sprintf(heater_msg, "%d", output_heater);
         printf("Heater Speed: %0.3f: \n", output_heater);
+        
+        // Gửi dữ liệu lên MQTT 
+        publish_message(mosq, TOPIC_TEMP, temp_msg);
+        publish_message(mosq, TOPIC_TEMP_CHANGE, temp_change_msg);
+        publish_message(mosq, TOPIC_PELTIER_HEAT, heater_msg);
+        publish_message(mosq, TOPIC_PELTIER_COOL, cooler_msg);
 
         destroyClassifiers();
 
-        sleep(60); // Delay 30s
-        // vTaskDelay(30000 / portTICK_PERIOD_MS);   //Delay 30s
+        sleep(60); // Delay 60s
     }
+
+    //Clean memory
+    mosquitto_destroy(mosq);
+    mosquitto_lib_cleanup();
+
     return 0;
 }
