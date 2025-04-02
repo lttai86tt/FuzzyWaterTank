@@ -4,7 +4,7 @@ LDFLAGS= -lwiringPi -lmosquitto
 SOURCES=$(wildcard ../src/*.c)
 OBJECTS=$(notdir $(SOURCES:.c=.o))
 HEADERS=$(wildcard ../inc/*.h)
-EXAMPLES = TecFanControl PeltierControl
+EXAMPLES = PeltierControl
 EXECUTABLES=$(addsuffix .out, $(EXAMPLES))
 OUTPUT_DIR=out
 

@@ -62,12 +62,11 @@
  #define WHEN(...) {__VA_ARGS__}
  
  // Define a macro to create a fuzzy rule
- #define PROPOSITION(_antecedent, ...)                                          \
+ #define PROPOSITION(_antecedent, _consequent)                                          \
      {.antecedent = (FuzzyAntecedent_t[])_antecedent,                           \
       .num_antecedents =                                                        \
           sizeof((FuzzyAntecedent_t[])_antecedent) / sizeof(FuzzyAntecedent_t), \
-      .consequents = (FuzzyVariable_t[]){__VA_ARGS__},                          \
-      .num_consequents = sizeof((FuzzyVariable_t[]){__VA_ARGS__}) / sizeof(FuzzyVariable_t)}
+      .consequent = _consequent}
  
  
  void fuzzyInference(const FuzzyRule_t *rules, int numRules);

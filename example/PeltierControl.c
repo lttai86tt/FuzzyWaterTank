@@ -89,27 +89,27 @@ void setPeltierHeatPower(int heaterPower) {
    // RECTANGULAR: Chu Nhat
 */
 #define TemperatureMembershipFunctions(X)                                      \
-    X(TEMPERATURE_LOW, -10.0, 0.0, 20.0, 28.0, TRAPEZOIDAL)                            \
+    X(TEMPERATURE_LOW, -10.0, 0.0, 20.0, 28.0, TRAPEZOIDAL)                    \
     X(TEMPERATURE_MEDIUM, 26.0, 30.0, 38.0, TRIANGULAR)                        \
     X(TEMPERATURE_HIGH, 28.0, 38.0, 100.0, 100.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TemperatureMembershipFunctions)
 
 #define TempChangeMembershipFunctions(X)                                       \
     X(TEMP_CHANGE_DECREASING, -50.0, -20.0, -1.0, 0.0, TRAPEZOIDAL)            \
-    X(TEMP_CHANGE_STABLE, -1.0, 0.0, 1.0, 0.0, TRIANGULAR)                     \
+    X(TEMP_CHANGE_STABLE, -1.0, 0.0, 1.0, TRIANGULAR)                          \
     X(TEMP_CHANGE_INCREASING, 0.0, 1.0, 20.0, 50.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TempChangeMembershipFunctions)
 //
 #define PeltierCoolerSpeedMembershipFunctions(X)                               \
-    X(PELTIER_COOLER_SPEED_OFF, -20.0, 0.0, 0.0, 0.0, RECTANGULAR)          \
-    X(PELTIER_COOLER_SPEED_SLOW, 00.0, 7.0, 15.0, 25.0, TRAPEZOIDAL)           \
+    X(PELTIER_COOLER_SPEED_OFF, -20.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
+    X(PELTIER_COOLER_SPEED_SLOW, 00.0, 10.0, 15.0, 25.0, TRAPEZOIDAL)          \
     X(PELTIER_COOLER_SPEED_MEDIUM, 15.0, 25.0, 30.0, 40.0, TRAPEZOIDAL)        \
     X(PELTIER_COOLER_SPEED_FAST, 35.0, 45.0, 70.0, 70.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierCoolerSpeedMembershipFunctions)
 
 #define PeltierHeaterSpeedMembershipFunctions(X)                               \
-    X(PELTIER_HEATER_SPEED_OFF, -20.0, 0.0, 0.0, 0.0, RECTANGULAR)           \
-    X(PELTIER_HEATER_SPEED_SLOW, 00.0, 7.0, 15.0, 25.0, TRAPEZOIDAL)           \
+    X(PELTIER_HEATER_SPEED_OFF, -20.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
+    X(PELTIER_HEATER_SPEED_SLOW, 00.0, 10.0, 15.0, 25.0, TRAPEZOIDAL)          \
     X(PELTIER_HEATER_SPEED_MEDIUM, 15.0, 25.0, 30.0, 40.0, TRAPEZOIDAL)        \
     X(PELTIER_HEATER_SPEED_FAST, 35.0, 45.0, 70.0, 70.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierHeaterSpeedMembershipFunctions)
@@ -265,25 +265,27 @@ int main() {
 
         FuzzyClassifier(currentTemperature, &TemperatureState);
         FuzzyClassifier(currentTemperatureChange, &TempChangeState);
-        printf("Temperature %.04f degC\n", currentTemperature);
-        printf("Temp Change %.04f degC/30sec\n", currentTemperatureChange);
+        printf("Temperature %0.3f degC\n", currentTemperature);
+        printf("Temp Change %0.3f degC/1 min \n\n", currentTemperatureChange);
 
         fuzzyInference(rules, (sizeof(rules) / sizeof(rules[0])));
 
+        printf("Cooler Speed Label \n");
         printClassifier(&PelCoolerSpeed, peltierSpeedLabels);
+        printf("Heater Speed Label \n");
         printClassifier(&PelHeaterSpeed, peltierSpeedLabels);
 
         double output_cooler = defuzzification(&PelCoolerSpeed);
         double output_heater = defuzzification(&PelHeaterSpeed);
 
         setPeltierCoolPower(output_cooler);
-        printf("Cooler Speed: %0.4f: \n", output_cooler);
+        printf("Cooler Speed: %0.3f: \n", output_cooler);
         setPeltierHeatPower(output_heater);
-        printf("Heater Speed: %0.4f: \n", output_heater);
+        printf("Heater Speed: %0.3f: \n", output_heater);
 
         destroyClassifiers();
 
-        delay(3000); // Delay 30s
+        sleep(60); // Delay 30s
         // vTaskDelay(30000 / portTICK_PERIOD_MS);   //Delay 30s
     }
     return 0;
