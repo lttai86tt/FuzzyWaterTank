@@ -30,8 +30,7 @@
  typedef struct {
      FuzzyAntecedent_t *antecedent;
      int num_antecedents;
-     FuzzyVariable_t *consequents;  // Mảng các kết quả đầu ra
-     int num_consequents;           // Số lượng kết quả đầu ra
+     FuzzyVariable_t consequent;
  } FuzzyRule_t;
  
  // Define macros to create fuzzy variables and antecedents
