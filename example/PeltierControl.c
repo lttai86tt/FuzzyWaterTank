@@ -23,11 +23,10 @@
 #define SENSOR_PATH "/sys/bus/w1/devices/28-3ce1d4434496/w1_slave"
 
 // MQTT Broker
-#define MQTT_HOST   ""  //"tcp://broker.hivemq.com:1883"
-#define CLIENTID    "WaterTank_Publisher"
-#define QOS         1
+#define MQTT_HOST   "mqtt.flespi.io"  //"tcp://broker.hivemq.com:1883"
+#define CLIENTID    "WaterTank"
+#define TOKEN       "zVVYZfoyMExlpmsIW4kEe2RKlF4ZVYpynLvlCLJBcFhcrWFKs6aMCym2GQgBIODh"
 #define MQTT_PORT   1883
-#define TIMEOUT     10000L
 
 #define TOPIC_TEMP              "watertank/temp"
 #define TOPIC_TEMP_CHANGE       "watertank/temp_change"
@@ -216,6 +215,21 @@ void createClassifiers() {
                  FUZZY_LENGTH(PeltierHeaterSpeedMembershipFunctions));
 }
 
+// Callback function when connected to the broker
+void on_connect(struct mosquitto *mosq, void *obj, int rc) {
+    if (rc == 0) {
+        printf("Connected to broker successfully.\n");
+    } else {
+        printf("Failed to connect, return code %d\n", rc);
+
+    }
+}
+
+// Callback function when the message is delivered
+void on_publish(struct mosquitto *mosq, void *obj, int mid) {
+    printf("Message with id %d published.\n", mid);
+}
+
 // Helper function to destroy the fuzzy classifiers
 void destroyClassifiers() {
     FuzzySetFree(&TemperatureState);
@@ -235,12 +249,13 @@ int main() {
         return 1;
     }
 
+    mosquitto_connect_callback_set(mosq, on_connect);
+    mosquitto_publish_callback_set(mosq, on_publish);
     // Connected to MQTT Broker
     if (mosquitto_connect(mosq, MQTT_HOST, MQTT_PORT, 60)) {
         printf("Error: Can not connect to MQTT broker\n");
         return 1;
     }
-
     // wiringPi initialization
     if (wiringPiSetupGpio() == -1) {
         printf("WiringPi setup failed!\n");
@@ -259,21 +274,23 @@ int main() {
         char heater_msg[50];
         if (currentTemperature == 0.0) {
             currentTemperature = get_Temperature(SENSOR_PATH);
+            sprintf(temp_msg, ": %.2f", currentTemperature);
             currentTemperatureChange = 0.0;
+            sprintf(temp_change_msg, ": %.2f", currentTemperatureChange);
         } else {
             currentTemperatureChange = currentTemperature - get_Temperature(SENSOR_PATH);
+            sprintf(temp_change_msg, ": %.2f", currentTemperatureChange);
             currentTemperature = get_Temperature(SENSOR_PATH);
-        }
+            sprintf(temp_msg, ": %.2f", currentTemperature);
 
-        sprintf(temp_msg, "%.2f", currentTemperature);
-        sprintf(temp_msg, "%.2f", currentTemperatureChange);
+        }
         // allocate memory
         createClassifiers();
 
         FuzzyClassifier(currentTemperature, &TemperatureState);
         FuzzyClassifier(currentTemperatureChange, &TempChangeState);
-        printf("Temperature %0.3f degC\n", currentTemperature);
-        printf("Temp Change %0.3f degC/1 min \n\n", currentTemperatureChange);
+        printf("Temperature %0.2f degC\n", currentTemperature);
+        printf("Temp Change %0.2f degC/1 min \n\n", currentTemperatureChange);
 
         fuzzyInference(rules, (sizeof(rules) / sizeof(rules[0])));
 
@@ -286,23 +303,23 @@ int main() {
         double output_heater = defuzzification(&PelHeaterSpeed);
 
         setPeltierCoolPower(output_cooler);
-        sprintf(cooler_msg, "%d", output_cooler);
-        printf("Cooler Speed: %0.3f: \n", output_cooler);
+        sprintf(cooler_msg, ": %0.2f", output_cooler);
+        printf("Cooler Speed: %0.2f% \n", output_cooler);
         setPeltierHeatPower(output_heater);
-        sprintf(heater_msg, "%d", output_heater);
-        printf("Heater Speed: %0.3f: \n", output_heater);
+        sprintf(heater_msg, ": %0.2f \n", output_heater);
+        printf("Heater Speed: %0.2f% \n", output_heater);
         
         // Gửi dữ liệu lên MQTT 
+        printf("\n====MQTT Publisher====\n\n");
         publish_message(mosq, TOPIC_TEMP, temp_msg);
         publish_message(mosq, TOPIC_TEMP_CHANGE, temp_change_msg);
-        publish_message(mosq, TOPIC_PELTIER_HEAT, heater_msg);
         publish_message(mosq, TOPIC_PELTIER_COOL, cooler_msg);
+        publish_message(mosq, TOPIC_PELTIER_HEAT, heater_msg);
 
         destroyClassifiers();
 
-        sleep(60); // Delay 60s
+        sleep(15); // Delay 60s
     }
-
     //Clean memory
     mosquitto_destroy(mosq);
     mosquitto_lib_cleanup();
