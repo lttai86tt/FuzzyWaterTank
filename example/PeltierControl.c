@@ -23,8 +23,11 @@
 #define SENSOR_PATH "/sys/bus/w1/devices/28-3ce1d4434496/w1_slave"
 
 // MQTT Broker
-#define MQTT_ADDRESS     "http://mqtt.flespi.io:1883"
-#define MQTT_CLIENTID    "WaterTank_Publisher"
+#define MQTT_ADDRESS     "mqtt.flespi.io"
+#define MQTT_PORT        "1883"
+#define MQTT_CLIENTID    "WaterTank"
+#define MQTT_USERNAME    "zVVYZfoyMExlpmsIW4kEe2RKlF4ZVYpynLvlCLJBcFhcrWFKs6aMCym2GQgBIODh"  
+#define MQTT_PASSWORD    ""    // No need
 #define MQTT_QOS         1
 #define TIMEOUT     10000L
 #define MQTT_TOKEN  ""
@@ -215,26 +218,46 @@ void destroyClassifiers() {
     FuzzySetFree(&PelHeaterSpeed);
 }
 
-
-int main() {
-
-    MQTTClient client;
+int mqtt_connect() {
     MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
     int rc;
 
-    // Khởi tạo client
-    MQTTClient_create(&client, MQTT_ADDRESS, MQTT_CLIENTID, MQTTCLIENT_PERSISTENCE_NONE, NULL);
-
-    // Thiết lập username là token
-    conn_opts.username = MQTT_TOKEN;
+    // Tạo client MQTT
+    MQTTClient_create(&client, MQTT_ADDRESS, CLIENT_ID,
+        MQTTCLIENT_PERSISTENCE_NONE, NULL);
+    
     conn_opts.keepAliveInterval = 20;
     conn_opts.cleansession = 1;
+    conn_opts.username = MQTT_USERNAME;
+    conn_opts.password = MQTT_PASSWORD;
 
-    // Kết nối đến MQTT broker
     if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS) {
-        printf("Lỗi kết nối MQTT: %d\n", rc);
-        return rc;
+        printf("Failed to connect to MQTT broker, return code %d\n", rc);
+        return 0;
     }
+    printf("Connected to flespi MQTT broker\n");
+    return 1;
+}
+
+void mqtt_publish(char* topic, char* message) {
+    MQTTClient_message pubmsg = MQTTClient_message_initializer;
+    MQTTClient_deliveryToken token;
+
+    pubmsg.payload = message;
+    pubmsg.payloadlen = strlen(message);
+    pubmsg.qos = 1;
+    pubmsg.retained = 0;
+
+    MQTTClient_publishMessage(client, topic, &pubmsg, &token);
+    MQTTClient_waitForCompletion(client, token, 10000L);
+}
+
+int main() {
+    // MQTT Client ID and credentials
+    if (!mqtt_connect()) {
+        return 1;
+    }
+
     // wiringPi initialization
     if (wiringPiSetupGpio() == -1) {
         printf("WiringPi setup failed!\n");
@@ -281,6 +304,19 @@ int main() {
         printf("Cooler Speed: %0.3f: \n", output_cooler);
         setPeltierHeatPower(output_heater);
         printf("Heater Speed: %0.3f: \n", output_heater);
+
+        snprintf(temp_msg, 50, "%.2f", currentTemperature);
+        snprintf(temp_change_msg, 50, "%.2f", currentTemperatureChange);
+        snprintf(cooler_msg, 50, "%.2f", output_cooler);
+        snprintf(heater_msg, 50, "%.2f", output_heater);
+
+        mqtt_publish(TOPIC_TEMP, temp_msg);
+        mqtt_publish(TOPIC_TEMP_CH, temp_change_msg);
+        mqtt_publish(TOPIC_COOLER, cooler_msg);
+        mqtt_publish(TOPIC_HEATER, heater_msg);
+
+        printf("Published to MQTT - Temp: %s, TempCh: %s, Cooler: %s, Heater: %s\n",
+               temp_msg, temp_change_msg, cooler_msg, heater_msg);
 
         destroyClassifiers();
 
