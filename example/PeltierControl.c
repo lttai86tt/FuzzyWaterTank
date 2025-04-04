@@ -6,7 +6,7 @@
  */
 
 #include "fuzzyc.h"
-#include "mosquitto.h"
+#include "MQTTClient.h"
 #include "softPwm.h"
 #include "unistd.h"
 #include "wiringPi.h"
@@ -23,11 +23,11 @@
 #define SENSOR_PATH "/sys/bus/w1/devices/28-3ce1d4434496/w1_slave"
 
 // MQTT Broker
-#define MQTT_HOST   ""  //"tcp://broker.hivemq.com:1883"
-#define CLIENTID    "WaterTank_Publisher"
-#define QOS         1
-#define MQTT_PORT   1883
+#define MQTT_ADDRESS     "http://mqtt.flespi.io:1883"
+#define MQTT_CLIENTID    "WaterTank_Publisher"
+#define MQTT_QOS         1
 #define TIMEOUT     10000L
+#define MQTT_TOKEN  ""
 
 #define TOPIC_TEMP              "watertank/temp"
 #define TOPIC_TEMP_CHANGE       "watertank/temp_change"
@@ -81,16 +81,6 @@ void setPeltierCoolPower(int coolerPower) {
 void setPeltierHeatPower(int heaterPower) {
     softPwmWrite(HEATER_PIN, heaterPower);
 }
-
-void publish_message(struct mosquitto *mosq, const char *topic, const char *message) {
-    int ret = mosquitto_publish(mosq, NULL, topic, strlen(message), message, 1, false);
-    if (ret != MOSQ_ERR_SUCCESS) {
-        printf("Send message %s failed: %s\n", topic, mosquitto_strerror(ret));
-    } else {
-        printf("Sent : [%s] %s\n", topic, message);
-    }
-}
-
 // Define the membership functions for the fuzzy sets
 /*
    >> NEED TO FIND CORRECT VALUES FOR MEMBERSHIP FUNCTIONS <<
@@ -225,22 +215,26 @@ void destroyClassifiers() {
     FuzzySetFree(&PelHeaterSpeed);
 }
 
+
 int main() {
-    // MQTT initialization
-    struct mosquitto *mosq;
-    mosquitto_lib_init();
-    mosq = mosquitto_new("Publisher", true, NULL);
-    if (!mosq) {
-        printf("Error: Can not initialization mosquitto client\n");
-        return 1;
-    }
 
-    // Connected to MQTT Broker
-    if (mosquitto_connect(mosq, MQTT_HOST, MQTT_PORT, 60)) {
-        printf("Error: Can not connect to MQTT broker\n");
-        return 1;
-    }
+    MQTTClient client;
+    MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
+    int rc;
 
+    // Khởi tạo client
+    MQTTClient_create(&client, MQTT_ADDRESS, MQTT_CLIENTID, MQTTCLIENT_PERSISTENCE_NONE, NULL);
+
+    // Thiết lập username là token
+    conn_opts.username = MQTT_TOKEN;
+    conn_opts.keepAliveInterval = 20;
+    conn_opts.cleansession = 1;
+
+    // Kết nối đến MQTT broker
+    if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS) {
+        printf("Lỗi kết nối MQTT: %d\n", rc);
+        return rc;
+    }
     // wiringPi initialization
     if (wiringPiSetupGpio() == -1) {
         printf("WiringPi setup failed!\n");
@@ -259,14 +253,12 @@ int main() {
         char heater_msg[50];
         if (currentTemperature == 0.0) {
             currentTemperature = get_Temperature(SENSOR_PATH);
+            snprintf(temp_msg, sizeof(temp_msg), "{\"temperature\": %.2f}", currentTemperature);
             currentTemperatureChange = 0.0;
         } else {
             currentTemperatureChange = currentTemperature - get_Temperature(SENSOR_PATH);
             currentTemperature = get_Temperature(SENSOR_PATH);
         }
-
-        sprintf(temp_msg, "%.2f", currentTemperature);
-        sprintf(temp_msg, "%.2f", currentTemperatureChange);
         // allocate memory
         createClassifiers();
 
@@ -286,26 +278,17 @@ int main() {
         double output_heater = defuzzification(&PelHeaterSpeed);
 
         setPeltierCoolPower(output_cooler);
-        sprintf(cooler_msg, "%d", output_cooler);
         printf("Cooler Speed: %0.3f: \n", output_cooler);
         setPeltierHeatPower(output_heater);
-        sprintf(heater_msg, "%d", output_heater);
         printf("Heater Speed: %0.3f: \n", output_heater);
-        
-        // Gửi dữ liệu lên MQTT 
-        publish_message(mosq, TOPIC_TEMP, temp_msg);
-        publish_message(mosq, TOPIC_TEMP_CHANGE, temp_change_msg);
-        publish_message(mosq, TOPIC_PELTIER_HEAT, heater_msg);
-        publish_message(mosq, TOPIC_PELTIER_COOL, cooler_msg);
 
         destroyClassifiers();
 
         sleep(60); // Delay 60s
     }
 
-    //Clean memory
-    mosquitto_destroy(mosq);
-    mosquitto_lib_cleanup();
+    MQTTClient_disconnect(client, 10000);
+    MQTTClient_destroy(&client);
 
     return 0;
 }
