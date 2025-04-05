@@ -23,14 +23,12 @@
 #define SENSOR_PATH "/sys/bus/w1/devices/28-3ce1d4434496/w1_slave"
 
 // MQTT Broker
-#define MQTT_ADDRESS     "mqtt.flespi.io"
-#define MQTT_PORT        "1883"
+#define MQTT_ADDRESS     "ssl://eab5d59939f54918ad1cc5129f7a2fd8.s1.eu.hivemq.cloud:8883"
 #define MQTT_CLIENTID    "WaterTank"
-#define MQTT_USERNAME    "zVVYZfoyMExlpmsIW4kEe2RKlF4ZVYpynLvlCLJBcFhcrWFKs6aMCym2GQgBIODh"  
-#define MQTT_PASSWORD    ""    // No need
-#define MQTT_QOS         1
-#define TIMEOUT     10000L
-#define MQTT_TOKEN  ""
+#define USERNAME         "WaterTank_Pi"  
+#define PASSWORD         "Pi123123"    
+#define QOS              1
+#define TIMEOUT          10000L
 
 #define TOPIC_TEMP              "watertank/temp"
 #define TOPIC_TEMP_CHANGE       "watertank/temp_change"
@@ -48,10 +46,6 @@ FuzzySet_t TempChangeState;  // Trang thai thay doi nhiet do
 // Define the output fuzzy set
 FuzzySet_t PelCoolerSpeed; // Toc do cua may lam mat
 FuzzySet_t PelHeaterSpeed; // Toc do cua may lam nong
-
-
- MQTTClient client;
-int is_connected = 0;
 // Read sensor temperature
 double get_Temperature(const char *sensor_path) {
 
@@ -221,53 +215,26 @@ void destroyClassifiers() {
     FuzzySetFree(&PelHeaterSpeed);
 }
 
-int mqtt_connect() {
-    MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
-    int rc;
-
-    // Tạo client MQTT
-    MQTTClient_create(&client, MQTT_ADDRESS, MQTT_CLIENTID,
-        MQTTCLIENT_PERSISTENCE_NONE, NULL);
-    
-    conn_opts.keepAliveInterval = 20;
-    conn_opts.cleansession = 1;
-    conn_opts.username = MQTT_USERNAME;
-    conn_opts.password = MQTT_PASSWORD;
-
-    if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS) {
-        printf("Failed to connect to MQTT broker, return code %d\n", rc);
-        return 0;
-    }
-    printf("Connected to flespi MQTT broker\n");
-    return 1;
-}
-
-void mqtt_disconnect() {
-    if (is_connected) {
-        MQTTClient_disconnect(client, 10000);
-        MQTTClient_destroy(&client);
-        is_connected = 0;
-    }
-}
-
-void mqtt_publish(char* topic, char* message) {
-    MQTTClient_message pubmsg = MQTTClient_message_initializer;
-    MQTTClient_deliveryToken token;
-
-    pubmsg.payload = message;
-    pubmsg.payloadlen = strlen(message);
-    pubmsg.qos = 1;
-    pubmsg.retained = 0;
-
-    MQTTClient_publishMessage(client, topic, &pubmsg, &token);
-    MQTTClient_waitForCompletion(client, token, 10000L);
-}
-
 int main() {
     // MQTT Client ID and credentials
-    if (!mqtt_connect()) {
+    MQTTClient client;
+    MQTTClient_connectOptions conn_opts = MQTTClient_connectOptions_initializer;
+    MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
+    int rc;
+
+    MQTTClient_create(&client, MQTT_ADDRESS, MQTT_CLIENTID, MQTTCLIENT_PERSISTENCE_NONE, NULL);
+    conn_opts.keepAliveInterval = 20;
+    conn_opts.cleansession = 1;
+    conn_opts.username = USERNAME;
+    conn_opts.password = PASSWORD;
+    conn_opts.ssl = &ssl_opts;
+
+    // Kết nối đến HiveMQ
+    if ((rc = MQTTClient_connect(client, &conn_opts)) != MQTTCLIENT_SUCCESS) {
+        printf("Connected to MQTT failed, error %d\n", rc);
         return 1;
     }
+    printf("Successfully connected to HiveMQ\n");
 
     // wiringPi initialization
     if (wiringPiSetupGpio() == -1) {
@@ -287,7 +254,6 @@ int main() {
         char heater_msg[50];
         if (currentTemperature == 0.0) {
             currentTemperature = get_Temperature(SENSOR_PATH);
-            snprintf(temp_msg, sizeof(temp_msg), "{\"temperature\": %.2f}", currentTemperature);
             currentTemperatureChange = 0.0;
         } else {
             currentTemperatureChange = currentTemperature - get_Temperature(SENSOR_PATH);
@@ -316,25 +282,26 @@ int main() {
         setPeltierHeatPower(output_heater);
         printf("Heater Speed: %0.3f: \n", output_heater);
 
-        snprintf(temp_msg, 50, "%.3f", currentTemperature);
-        snprintf(temp_change_msg, 50, "%.3f", currentTemperatureChange);
-        snprintf(cooler_msg, 50, "%.3f", output_cooler);
-        snprintf(heater_msg, 50, "%.3f", output_heater);
-
-        mqtt_publish(TOPIC_TEMP, temp_msg);
-        mqtt_publish(TOPIC_TEMP_CHANGE, temp_change_msg);
-        mqtt_publish(TOPIC_PELTIER_COOL, cooler_msg);
-        mqtt_publish(TOPIC_PELTIER_HEAT, heater_msg);
-
-        printf("\n====Published to MQTT====\n");
-        printf("Temperature: %s degC \nTempCh: %s degC \nCooler: %s % \nHeater: %s % \n",
-               temp_msg, temp_change_msg, cooler_msg, heater_msg);
+        printf("\n====MQTT publisher====\n");
+        snprintf(temp_msg, sizeof(temp_msg), "%.3f", currentTemperature);
+        MQTTClient_publish(client, TOPIC_TEMP, strlen(temp_msg), temp_msg, QOS, 0, NULL);
+        printf("watertank/temp: %s degC\n", temp_msg);
+        snprintf(temp_change_msg, sizeof(temp_change_msg), "%.3f", currentTemperatureChange);
+        MQTTClient_publish(client, TOPIC_TEMP_CHANGE, strlen(temp_change_msg), temp_change_msg, QOS, 0, NULL);
+        printf("watertank/temp_change: %s degC\n", temp_change_msg);
+        snprintf(cooler_msg, sizeof(cooler_msg), "%.3f", output_cooler);
+        MQTTClient_publish(client, TOPIC_PELTIER_COOL, strlen(cooler_msg), cooler_msg, QOS, 0, NULL);
+        printf("watertank/cooler: %s %\n", cooler_msg);
+        snprintf(heater_msg, sizeof(heater_msg), "%.3f", output_heater);
+        MQTTClient_publish(client, TOPIC_PELTIER_HEAT, strlen(heater_msg), heater_msg, QOS, 0, NULL);
+        printf("watertank/heater: %s %\n", heater_msg);       
 
         destroyClassifiers();
 
         sleep(15); // Delay 60s
     }
 
-    mqtt_disconnect();
+    MQTTClient_disconnect(client, 10000);
+    MQTTClient_destroy(&client);
     return 0;
 }
