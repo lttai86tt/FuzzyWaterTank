@@ -49,6 +49,9 @@ FuzzySet_t TempChangeState;  // Trang thai thay doi nhiet do
 FuzzySet_t PelCoolerSpeed; // Toc do cua may lam mat
 FuzzySet_t PelHeaterSpeed; // Toc do cua may lam nong
 
+
+ MQTTClient client;
+int is_connected = 0;
 // Read sensor temperature
 double get_Temperature(const char *sensor_path) {
 
@@ -223,7 +226,7 @@ int mqtt_connect() {
     int rc;
 
     // Tạo client MQTT
-    MQTTClient_create(&client, MQTT_ADDRESS, CLIENT_ID,
+    MQTTClient_create(&client, MQTT_ADDRESS, MQTT_CLIENTID,
         MQTTCLIENT_PERSISTENCE_NONE, NULL);
     
     conn_opts.keepAliveInterval = 20;
@@ -237,6 +240,14 @@ int mqtt_connect() {
     }
     printf("Connected to flespi MQTT broker\n");
     return 1;
+}
+
+void mqtt_disconnect() {
+    if (is_connected) {
+        MQTTClient_disconnect(client, 10000);
+        MQTTClient_destroy(&client);
+        is_connected = 0;
+    }
 }
 
 void mqtt_publish(char* topic, char* message) {
@@ -305,26 +316,25 @@ int main() {
         setPeltierHeatPower(output_heater);
         printf("Heater Speed: %0.3f: \n", output_heater);
 
-        snprintf(temp_msg, 50, "%.2f", currentTemperature);
-        snprintf(temp_change_msg, 50, "%.2f", currentTemperatureChange);
-        snprintf(cooler_msg, 50, "%.2f", output_cooler);
-        snprintf(heater_msg, 50, "%.2f", output_heater);
+        snprintf(temp_msg, 50, "%.3f", currentTemperature);
+        snprintf(temp_change_msg, 50, "%.3f", currentTemperatureChange);
+        snprintf(cooler_msg, 50, "%.3f", output_cooler);
+        snprintf(heater_msg, 50, "%.3f", output_heater);
 
         mqtt_publish(TOPIC_TEMP, temp_msg);
-        mqtt_publish(TOPIC_TEMP_CH, temp_change_msg);
-        mqtt_publish(TOPIC_COOLER, cooler_msg);
-        mqtt_publish(TOPIC_HEATER, heater_msg);
+        mqtt_publish(TOPIC_TEMP_CHANGE, temp_change_msg);
+        mqtt_publish(TOPIC_PELTIER_COOL, cooler_msg);
+        mqtt_publish(TOPIC_PELTIER_HEAT, heater_msg);
 
-        printf("Published to MQTT - Temp: %s, TempCh: %s, Cooler: %s, Heater: %s\n",
+        printf("\n====Published to MQTT====\n");
+        printf("Temperature: %s degC \nTempCh: %s degC \nCooler: %s % \nHeater: %s % \n",
                temp_msg, temp_change_msg, cooler_msg, heater_msg);
 
         destroyClassifiers();
 
-        sleep(60); // Delay 60s
+        sleep(15); // Delay 60s
     }
 
-    MQTTClient_disconnect(client, 10000);
-    MQTTClient_destroy(&client);
-
+    mqtt_disconnect();
     return 0;
 }
