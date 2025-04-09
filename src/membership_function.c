@@ -1,13 +1,3 @@
-/**
- * @file membership_functions.c
- * @brief Fuzzy Logic membership function implementation.
- * @author Robin Prilliwtz
- * @date 2024
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * See LICENSE.txt file for details.
- *
- */
 
 #include "membership_function.h"
 

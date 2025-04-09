@@ -1,30 +1,4 @@
-/**
- * @file TecFanControl.c
- * @brief This C program implements a fuzzy logic controller that determines the
- * desired fan speed based on four input parameters: current temperature,
- * current temperature change, current TEC power, and current fan state.
- * The program uses fuzzy logic rules to evaluate the inputs and produce a fuzzy
- * output, which is then defuzzified to produce a crisp fan speed value.
- * The program takes the input values from the command line and prints the
- * output fan speed as a percentage.
- * @author Robin prillwitz
- * @date 2024
- *
- *    Copyright 2024 Robin Prillwitz
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *      or view LICENSE.txt
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- +  See the License for the specific language governing permissions and
- *  limitations under the License.
-*/
+
 
 #include "fuzzyc.h"
 

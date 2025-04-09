@@ -84,10 +84,7 @@ mingw32-make clean
 #stop
 Ctrl + C 
 ```
-```
-Usage: ./out/minmal.out <value>
-Usage: ./out/TecFanControl.out <currentTemperature> <currentTemperatureChange> <currentTECPower> <currentFan>
-```
+
 You can then plot a simple surface of the fan controller example using the provided python script:
 ```bash
 python -m venv ./venv
