@@ -1,42 +1,50 @@
 /**
  * @file PeltierControl.c
  *
- * To-Do:  
+ * To-Do:
  * 1 . testing mqtt broker
  */
 
-#include "fuzzyc.h"
 #include "MQTTClient.h"
+#include "fuzzyc.h"
 #include "softPwm.h"
 #include "unistd.h"
 #include "wiringPi.h"
 
+#include <hiredis/hiredis.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 // Sensor and PWM
-#define PWM_RANGE   70
-#define COOLER_PIN  23
-#define HEATER_PIN  24
+#define PWM_RANGE 70
+#define COOLER_PIN 23
+#define HEATER_PIN 24
 #define SENSOR_PATH "/sys/bus/w1/devices/28-3ce1d4434496/w1_slave"
 
 // MQTT Broker
-#define MQTT_ADDRESS     "ssl://eab5d59939f54918ad1cc5129f7a2fd8.s1.eu.hivemq.cloud:8883"
-#define MQTT_CLIENTID    "WaterTank"
-#define USERNAME         "WaterTank_Pi"  
-#define PASSWORD         "Pi123123"    
-#define QOS              1
-#define TIMEOUT          10000L
+#define MQTT_ADDRESS                                                           \
+    "ssl://eab5d59939f54918ad1cc5129f7a2fd8.s1.eu.hivemq.cloud:8883"
+#define MQTT_CLIENTID "WaterTank"
+#define USERNAME "WaterTank_Pi"
+#define PASSWORD "Pi123123"
+#define QOS 1
+#define TIMEOUT 10000L
 
-#define TOPIC_TEMP              "watertank/temp"
-#define TOPIC_TEMP_CHANGE       "watertank/temp_change"
-#define TOPIC_PELTIER_COOL      "watertank/cooler"
-#define TOPIC_PELTIER_HEAT      "watertank/heater"
+#define TOPIC_TEMP "watertank/temp"
+#define TOPIC_TEMP_CHANGE "watertank/temp_change"
+#define TOPIC_PELTIER_COOL "watertank/cooler"
+#define TOPIC_PELTIER_HEAT "watertank/heater"
+
+// Define Redis server address and port
+#define REDIS_ADDRESS "172.30.85.87" // Replace with your Redis server address
+#define REDIS_PORT 6379              // Default Redis port
 // Define the labels for the fuzzy sets (only used for debugging)
-const char *tempLabels[] = {"Cool", "Normal", "Hot"}; // Lanh <> Binh thuong <> Nong
-const char *changeLabels[] = {"Dec", "Stable", "Inc"}; // Giam <> On dinh <> Tang
+const char *tempLabels[] = {"Cool", "Normal",
+                            "Hot"}; // Lanh <> Binh thuong <> Nong
+const char *changeLabels[] = {"Dec", "Stable",
+                              "Inc"}; // Giam <> On dinh <> Tang
 const char *peltierSpeedLabels[] = {"Off", "Slow", "Medium", "Fast"};
 
 // Define the input fuzzy sets
@@ -129,7 +137,7 @@ FuzzyRule_t rules[] = {
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_FAST)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
-                           VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
+                            VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
 
     // Rule 2:
@@ -147,7 +155,7 @@ FuzzyRule_t rules[] = {
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_SLOW)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
-                           VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
+                            VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
     // Rule 4:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
@@ -155,7 +163,7 @@ FuzzyRule_t rules[] = {
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_SLOW)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
-                VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
+                            VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
     // Rule 5:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
@@ -163,7 +171,7 @@ FuzzyRule_t rules[] = {
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
-                           VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
+                            VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_SLOW)),
     // Rule 6:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
@@ -171,7 +179,7 @@ FuzzyRule_t rules[] = {
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_MEDIUM),
-                           VAR(TempChangeState, TEMP_CHANGE_STABLE))),
+                            VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
     // Rule 7:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
@@ -179,16 +187,16 @@ FuzzyRule_t rules[] = {
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
-                VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
+                            VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_SLOW)),
-    // Rule 8: 
+    // Rule 8:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_MEDIUM)),
-    // Rule 9: 
+    // Rule 9:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
@@ -226,7 +234,8 @@ int main() {
     MQTTClient_SSLOptions ssl_opts = MQTTClient_SSLOptions_initializer;
     int rc;
 
-    MQTTClient_create(&client, MQTT_ADDRESS, MQTT_CLIENTID, MQTTCLIENT_PERSISTENCE_NONE, NULL);
+    MQTTClient_create(&client, MQTT_ADDRESS, MQTT_CLIENTID,
+                      MQTTCLIENT_PERSISTENCE_NONE, NULL);
     conn_opts.keepAliveInterval = 20;
     conn_opts.cleansession = 1;
     conn_opts.username = USERNAME;
@@ -240,18 +249,38 @@ int main() {
     }
     printf("Successfully connected to HiveMQ\n");
 
+    // Initialize Redis connection
+    redisContext *redis_conn = redisConnect(REDIS_ADDRESS, REDIS_PORT);
+    if (redis_conn == NULL || redis_conn->err) {
+        if (redis_conn) {
+            printf("Connection to Redis failed: %s\n", redis_conn->errstr);
+            redisFree(redis_conn);
+        } else {
+            printf(
+                "Connection to Redis failed: can't allocate redis context\n");
+        }
+        MQTTClient_disconnect(client, 10000);
+        MQTTClient_destroy(&client);
+        return 1;
+    }
+    printf("Successfully connected to Redis\n");
+
     // wiringPi initialization
     if (wiringPiSetupGpio() == -1) {
         printf("WiringPi setup failed!\n");
+        MQTTClient_disconnect(client, 10000);
+        MQTTClient_destroy(&client);
+        redisFree(redis_conn);
         return 1;
     }
+
     double currentTemperature = 0.0;
     double currentTemperatureChange = 0.0;
     softPwmCreate(COOLER_PIN, 0, PWM_RANGE);
     softPwmCreate(HEATER_PIN, 0, PWM_RANGE);
 
     while (1) {
-        
+
         char temp_msg[50];
         char temp_change_msg[50];
         char cooler_msg[50];
@@ -260,7 +289,8 @@ int main() {
             currentTemperature = get_Temperature(SENSOR_PATH);
             currentTemperatureChange = 0.0;
         } else {
-            currentTemperatureChange = currentTemperature - get_Temperature(SENSOR_PATH);
+            currentTemperatureChange =
+                currentTemperature - get_Temperature(SENSOR_PATH);
             currentTemperature = get_Temperature(SENSOR_PATH);
         }
         // allocate memory
@@ -286,24 +316,74 @@ int main() {
 
         printf("\n====MQTT publisher====\n");
         snprintf(temp_msg, sizeof(temp_msg), "%.3f", currentTemperature);
-        MQTTClient_publish(client, TOPIC_TEMP, strlen(temp_msg), temp_msg, QOS, 0, NULL);
+        MQTTClient_publish(client, TOPIC_TEMP, strlen(temp_msg), temp_msg, QOS,
+                           0, NULL);
         printf("watertank/temp: %s degC\n", temp_msg);
-        snprintf(temp_change_msg, sizeof(temp_change_msg), "%.3f", currentTemperatureChange);
-        MQTTClient_publish(client, TOPIC_TEMP_CHANGE, strlen(temp_change_msg), temp_change_msg, QOS, 0, NULL);
+        snprintf(temp_change_msg, sizeof(temp_change_msg), "%.3f",
+                 currentTemperatureChange);
+        MQTTClient_publish(client, TOPIC_TEMP_CHANGE, strlen(temp_change_msg),
+                           temp_change_msg, QOS, 0, NULL);
         printf("watertank/temp_change: %s degC\n", temp_change_msg);
         snprintf(cooler_msg, sizeof(cooler_msg), "%.3f", output_cooler);
-        MQTTClient_publish(client, TOPIC_PELTIER_COOL, strlen(cooler_msg), cooler_msg, QOS, 0, NULL);
+        MQTTClient_publish(client, TOPIC_PELTIER_COOL, strlen(cooler_msg),
+                           cooler_msg, QOS, 0, NULL);
         printf("watertank/cooler: %s %\n", cooler_msg);
         snprintf(heater_msg, sizeof(heater_msg), "%.3f", output_heater);
-        MQTTClient_publish(client, TOPIC_PELTIER_HEAT, strlen(heater_msg), heater_msg, QOS, 0, NULL);
-        printf("watertank/heater: %s %\n", heater_msg);       
+        MQTTClient_publish(client, TOPIC_PELTIER_HEAT, strlen(heater_msg),
+                           heater_msg, QOS, 0, NULL);
+        printf("watertank/heater: %s %\n", heater_msg);
+
+        printf("\n====Redis publisher====\n");
+        redisReply *reply;
+
+        // Store temperature in Redis
+        reply = redisCommand(redis_conn, "SET watertank:temp %s", temp_msg);
+        if (reply == NULL) {
+            printf("Redis command failed (SET watertank:temp): %s\n",
+                   redis_conn->errstr);
+        } else {
+            printf("Redis: watertank:temp -> %s\n", reply->str);
+            freeReplyObject(reply);
+        }
+
+        // Store temperature change in Redis
+        reply = redisCommand(redis_conn, "SET watertank:temp_change %s",
+                             temp_change_msg);
+        if (reply == NULL) {
+            printf("Redis command failed (SET watertank:temp_change): %s\n",
+                   redis_conn->errstr);
+        } else {
+            printf("Redis: watertank:temp_change -> %s\n", reply->str);
+            freeReplyObject(reply);
+        }
+
+        // Store cooler speed in Redis
+        reply = redisCommand(redis_conn, "SET watertank:cooler %s", cooler_msg);
+        if (reply == NULL) {
+            printf("Redis command failed (SET watertank:cooler): %s\n",
+                   redis_conn->errstr);
+        } else {
+            printf("Redis: watertank:cooler -> %s\n", reply->str);
+            freeReplyObject(reply);
+        }
+
+        // Store heater speed in Redis
+        reply = redisCommand(redis_conn, "SET watertank:heater %s", heater_msg);
+        if (reply == NULL) {
+            printf("Redis command failed (SET watertank:heater): %s\n",
+                   redis_conn->errstr);
+        } else {
+            printf("Redis: watertank:heater -> %s\n", reply->str);
+            freeReplyObject(reply);
+        }
 
         destroyClassifiers();
 
-        sleep(15); // Delay 60s
+        sleep(30); // Delay 60s
     }
 
     MQTTClient_disconnect(client, 10000);
     MQTTClient_destroy(&client);
+    redisFree(redis_conn);
     return 0;
 }
