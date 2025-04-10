@@ -40,6 +40,7 @@
 // Define Redis server address and port
 #define REDIS_ADDRESS "172.30.85.87" // Replace with your Redis server address
 #define REDIS_PORT 6379              // Default Redis port
+
 // Define the labels for the fuzzy sets (only used for debugging)
 const char *tempLabels[] = {"Cool", "Normal",
                             "Hot"}; // Lanh <> Binh thuong <> Nong
@@ -309,74 +310,102 @@ int main() {
         printClassifier(&PelHeaterSpeed, peltierSpeedLabels);
 
         double output_cooler = defuzzification(&PelCoolerSpeed);
+        double output_heater = defuzzification(&PelHeaterSpeed);
         setPeltierCoolPower(output_cooler);
         printf("Cooler Speed: %0.3f: \n", output_cooler);
         setPeltierHeatPower(output_heater);
         printf("Heater Speed: %0.3f: \n", output_heater);
 
         printf("\n====MQTT publisher====\n");
+        MQTTClient_deliveryToken token;
+
         snprintf(temp_msg, sizeof(temp_msg), "%.3f", currentTemperature);
-        MQTTClient_publish(client, TOPIC_TEMP, strlen(temp_msg), temp_msg, QOS,
-                           0, NULL);
-        printf("watertank/temp: %s degC\n", temp_msg);
-        snprintf(temp_change_msg, sizeof(temp_change_msg), "%.3f",
-                 currentTemperatureChange);
-        MQTTClient_publish(client, TOPIC_TEMP_CHANGE, strlen(temp_change_msg),
-                           temp_change_msg, QOS, 0, NULL);
-        printf("watertank/temp_change: %s degC\n", temp_change_msg);
+        rc = MQTTClient_publish(client, TOPIC_TEMP, strlen(temp_msg), temp_msg, QOS, 0, &token);
+        if (rc != MQTTCLIENT_SUCCESS) {
+            printf("Failed to publish watertank/temp, error: %d\n", rc);
+            MQTTClient_disconnect(client, 10000);
+            if (MQTTClient_connect(client, &conn_opts) != MQTTCLIENT_SUCCESS) {
+                printf("Reconnection failed, exiting...\n");
+                break;
+            }
+        } else {
+            printf("watertank/temp: %s degC\n", temp_msg);
+        }
+
+        snprintf(temp_change_msg, sizeof(temp_change_msg), "%.3f", currentTemperatureChange);
+        rc = MQTTClient_publish(client, TOPIC_TEMP_CHANGE, strlen(temp_change_msg), temp_change_msg, QOS, 0, &token);
+        if (rc != MQTTCLIENT_SUCCESS) {
+            printf("Failed to publish watertank/temp_change, error: %d\n", rc);
+        } else {
+            printf("watertank/temp_change: %s degC\n", temp_change_msg);
+        }
+
         snprintf(cooler_msg, sizeof(cooler_msg), "%.3f", output_cooler);
-        MQTTClient_publish(client, TOPIC_PELTIER_COOL, strlen(cooler_msg),
-                           cooler_msg, QOS, 0, NULL);
-        printf("watertank/cooler: %s %\n", cooler_msg);
+        rc = MQTTClient_publish(client, TOPIC_PELTIER_COOL, strlen(cooler_msg), cooler_msg, QOS, 0, &token);
+        if (rc != MQTTCLIENT_SUCCESS) {
+            printf("Failed to publish watertank/cooler, error: %d\n", rc);
+        } else {
+            printf("watertank/cooler: %s %%\n", cooler_msg);
+        }
+
         snprintf(heater_msg, sizeof(heater_msg), "%.3f", output_heater);
-        MQTTClient_publish(client, TOPIC_PELTIER_HEAT, strlen(heater_msg),
-                           heater_msg, QOS, 0, NULL);
-        printf("watertank/heater: %s %\n", heater_msg);
+        rc = MQTTClient_publish(client, TOPIC_PELTIER_HEAT, strlen(heater_msg), heater_msg, QOS, 0, &token);
+        if (rc != MQTTCLIENT_SUCCESS) {
+            printf("Failed to publish watertank/heater, error: %d\n", rc);
+        } else {
+            printf("watertank/heater: %s %%\n", heater_msg);
+        }
 
         printf("\n====Redis publisher====\n");
         redisReply *reply;
 
-        // Store temperature in Redis
-        reply = redisCommand(redis_conn, "SET watertank:temp %s", temp_msg);
+        // Store temperature in Redis List
+        reply = redisCommand(redis_conn, "RPUSH watertank:temp %s", temp_msg);
         if (reply == NULL) {
-            printf("Redis command failed (SET watertank:temp): %s\n",
+            printf("Redis command failed (RPUSH watertank:temp): %s\n",
                    redis_conn->errstr);
         } else {
-            printf("Redis: watertank:temp -> %s\n", reply->str);
+            printf("Redis: watertank:temp -> Added %s to list (len: %lld)\n",
+                   temp_msg, reply->integer);
             freeReplyObject(reply);
         }
 
-        // Store temperature change in Redis
-        reply = redisCommand(redis_conn, "SET watertank:temp_change %s",
+        // Store temperature change in Redis List
+        reply = redisCommand(redis_conn, "RPUSH watertank:temp_change %s",
                              temp_change_msg);
         if (reply == NULL) {
-            printf("Redis command failed (SET watertank:temp_change): %s\n",
+            printf("Redis command failed (RPUSH watertank:temp_change): %s\n",
                    redis_conn->errstr);
         } else {
-            printf("Redis: watertank:temp_change -> %s\n", reply->str);
+            printf("Redis: watertank:temp_change -> Added %s to list (len: "
+                   "%lld)\n",
+                   temp_change_msg, reply->integer);
             freeReplyObject(reply);
         }
 
-        // Store cooler speed in Redis
-        reply = redisCommand(redis_conn, "SET watertank:cooler %s", cooler_msg);
+        // Store cooler speed in Redis List
+        reply =
+            redisCommand(redis_conn, "RPUSH watertank:cooler %s", cooler_msg);
         if (reply == NULL) {
-            printf("Redis command failed (SET watertank:cooler): %s\n",
+            printf("Redis command failed (RPUSH watertank:cooler): %s\n",
                    redis_conn->errstr);
         } else {
-            printf("Redis: watertank:cooler -> %s\n", reply->str);
+            printf("Redis: watertank:cooler -> Added %s to list (len: %lld)\n",
+                   cooler_msg, reply->integer);
             freeReplyObject(reply);
         }
 
-        // Store heater speed in Redis
-        reply = redisCommand(redis_conn, "SET watertank:heater %s", heater_msg);
+        // Store heater speed in Redis List
+        reply =
+            redisCommand(redis_conn, "RPUSH watertank:heater %s", heater_msg);
         if (reply == NULL) {
-            printf("Redis command failed (SET watertank:heater): %s\n",
+            printf("Redis command failed (RPUSH watertank:heater): %s\n",
                    redis_conn->errstr);
         } else {
-            printf("Redis: watertank:heater -> %s\n", reply->str);
+            printf("Redis: watertank:heater -> Added %s to list (len: %lld)\n",
+                   heater_msg, reply->integer);
             freeReplyObject(reply);
         }
-
         destroyClassifiers();
 
         sleep(30); // Delay 60s
