@@ -106,29 +106,29 @@ void setPeltierHeatPower(int heaterPower) {
    // RECTANGULAR: Chu Nhat
 */
 #define TemperatureMembershipFunctions(X)                                      \
-    X(TEMPERATURE_LOW, -10.0, 0.0, 20.0, 28.0, TRAPEZOIDAL)                    \
-    X(TEMPERATURE_MEDIUM, 26.0, 30.0, 38.0, TRIANGULAR)                        \
-    X(TEMPERATURE_HIGH, 28.0, 38.0, 100.0, 100.0, TRAPEZOIDAL)
+    X(TEMPERATURE_LOW, -10.0, 10.0, 25.0, 30.0, TRAPEZOIDAL)                    \
+    X(TEMPERATURE_MEDIUM, 28.0, 30.0, 32.0, TRIANGULAR)                        \
+    X(TEMPERATURE_HIGH, 30.0, 38.0, 100.0, 100.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TemperatureMembershipFunctions)
 
 #define TempChangeMembershipFunctions(X)                                       \
-    X(TEMP_CHANGE_DECREASING, -50.0, -20.0, -1.0, 0.0, TRAPEZOIDAL)            \
+    X(TEMP_CHANGE_DECREASING, -20.0, -10.0, -1.0, 0.0, TRAPEZOIDAL)            \
     X(TEMP_CHANGE_STABLE, -1.0, 0.0, 1.0, TRIANGULAR)                          \
-    X(TEMP_CHANGE_INCREASING, 0.0, 1.0, 20.0, 50.0, TRAPEZOIDAL)
+    X(TEMP_CHANGE_INCREASING, 0.0, 1.0, 10.0, 20.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TempChangeMembershipFunctions)
 //
 #define PeltierCoolerSpeedMembershipFunctions(X)                               \
-    X(PELTIER_COOLER_SPEED_OFF, -20.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
-    X(PELTIER_COOLER_SPEED_SLOW, 00.0, 10.0, 15.0, 25.0, TRAPEZOIDAL)          \
-    X(PELTIER_COOLER_SPEED_MEDIUM, 15.0, 25.0, 30.0, 40.0, TRAPEZOIDAL)        \
-    X(PELTIER_COOLER_SPEED_FAST, 35.0, 45.0, 70.0, 70.0, TRAPEZOIDAL)
+    X(PELTIER_COOLER_SPEED_OFF, -10.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
+    X(PELTIER_COOLER_SPEED_SLOW, 00.0, 15.0, 30.0, 40.0, TRAPEZOIDAL)          \
+    X(PELTIER_COOLER_SPEED_MEDIUM, 30.0, 40.0, 55.0, 70.0, TRAPEZOIDAL)        \
+    X(PELTIER_COOLER_SPEED_FAST, 55.0, 70.0, 80.0, 80.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierCoolerSpeedMembershipFunctions)
 
 #define PeltierHeaterSpeedMembershipFunctions(X)                               \
-    X(PELTIER_HEATER_SPEED_OFF, -20.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
-    X(PELTIER_HEATER_SPEED_SLOW, 00.0, 10.0, 15.0, 25.0, TRAPEZOIDAL)          \
-    X(PELTIER_HEATER_SPEED_MEDIUM, 15.0, 25.0, 30.0, 40.0, TRAPEZOIDAL)        \
-    X(PELTIER_HEATER_SPEED_FAST, 35.0, 45.0, 70.0, 70.0, TRAPEZOIDAL)
+    X(PELTIER_HEATER_SPEED_OFF, -10.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
+    X(PELTIER_HEATER_SPEED_SLOW, 00.0, 15.0, 30.0, 40.0, TRAPEZOIDAL)          \
+    X(PELTIER_HEATER_SPEED_MEDIUM, 30.0, 40.0, 55.0, 70.0, TRAPEZOIDAL)        \
+    X(PELTIER_HEATER_SPEED_FAST, 55.0, 70.0, 80.0, 80.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierHeaterSpeedMembershipFunctions)
 // Define the fuzzy rules
 /*
