@@ -15,7 +15,7 @@
 #include "wiringPi.h"
 
 // Sensor and PWM
-#define PWM_RANGE   80
+#define PWM_RANGE   100
 #define COOLER_PIN  23
 #define HEATER_PIN  24
 #define SENSOR_PATH "/sys/bus/w1/devices/28-3ce1d4434496/w1_slave"
@@ -121,14 +121,14 @@ DEFINE_FUZZY_MEMBERSHIP(TempChangeMembershipFunctions)
     X(PELTIER_COOLER_SPEED_OFF, -10.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
     X(PELTIER_COOLER_SPEED_SLOW, 00.0, 15.0, 30.0, 40.0, TRAPEZOIDAL)          \
     X(PELTIER_COOLER_SPEED_MEDIUM, 30.0, 40.0, 55.0, 70.0, TRAPEZOIDAL)        \
-    X(PELTIER_COOLER_SPEED_FAST, 55.0, 70.0, 80.0, 80.0, TRAPEZOIDAL)
+    X(PELTIER_COOLER_SPEED_FAST, 55.0, 85.0, 100.0, 100.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierCoolerSpeedMembershipFunctions)
 
 #define PeltierHeaterSpeedMembershipFunctions(X)                               \
     X(PELTIER_HEATER_SPEED_OFF, -10.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
     X(PELTIER_HEATER_SPEED_SLOW, 00.0, 15.0, 30.0, 40.0, TRAPEZOIDAL)          \
     X(PELTIER_HEATER_SPEED_MEDIUM, 30.0, 40.0, 55.0, 70.0, TRAPEZOIDAL)        \
-    X(PELTIER_HEATER_SPEED_FAST, 55.0, 70.0, 80.0, 80.0, TRAPEZOIDAL)
+    X(PELTIER_HEATER_SPEED_FAST, 55.0, 85.0, 100.0, 100.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierHeaterSpeedMembershipFunctions)
 // Define the fuzzy rules
 /*
@@ -148,7 +148,7 @@ FuzzyRule_t rules[] = {
     // Rule 2:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_MEDIUM)),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_FAST)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
@@ -200,7 +200,7 @@ FuzzyRule_t rules[] = {
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
-                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_MEDIUM)),
+                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_FAST)),
     // Rule 9: 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),

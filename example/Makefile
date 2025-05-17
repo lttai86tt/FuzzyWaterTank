@@ -4,7 +4,7 @@ LDFLAGS= -lwiringPi -lpaho-mqtt3cs
 SOURCES=$(wildcard ../src/*.c)
 OBJECTS=$(notdir $(SOURCES:.c=.o))
 HEADERS=$(wildcard ../inc/*.h)
-EXAMPLES = PeltierControl
+EXAMPLES = PeltierControl 
 EXECUTABLES=$(addsuffix .out, $(EXAMPLES))
 OUTPUT_DIR=out
 
