@@ -15,7 +15,7 @@
 #include <time.h>
 
 // Sensor and PWM
-#define PWM_RANGE 80
+#define PWM_RANGE 100
 #define COOLER_PIN 23
 #define HEATER_PIN 24
 #define SENSOR_PATH "/sys/bus/w1/devices/28-3ce1d4434496/w1_slave"
@@ -108,10 +108,10 @@ void setPeltierHeatPower(int heaterPower) {
    // RECTANGULAR: Chu Nhat
 */
 #define TemperatureMembershipFunctions(X)                                      \
-    X(TEMPERATURE_VLOW, 0.0, 5.0, 10.0, 15.0, TRAPEZOIDAL)                     \
-    X(TEMPERATURE_LOW, 10.0, 15.0, 25.0, 30.0, TRAPEZOIDAL)                    \
-    X(TEMPERATURE_MEDIUM, 29.0, 30.0, 31.0, TRIANGULAR)                        \
-    X(TEMPERATURE_HIGH, 30.0, 35.0, 60.0, 100.0, TRAPEZOIDAL)
+    X(TEMPERATURE_VLOW, 0.0, 5.0, 10.0, 17.0, TRAPEZOIDAL)                     \
+    X(TEMPERATURE_LOW, 10.0, 17.0, 25.0, 30.0, TRAPEZOIDAL)                    \
+    X(TEMPERATURE_MEDIUM, 29.5, 30.0, 30.5, TRIANGULAR)                        \
+    X(TEMPERATURE_HIGH, 30.0, 35.0, 40.0, 100.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TemperatureMembershipFunctions)
 
 #define TempChangeMembershipFunctions(X)                                       \
@@ -123,15 +123,15 @@ DEFINE_FUZZY_MEMBERSHIP(TempChangeMembershipFunctions)
 #define PeltierCoolerSpeedMembershipFunctions(X)                               \
     X(PELTIER_COOLER_SPEED_OFF, -10.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
     X(PELTIER_COOLER_SPEED_SLOW, 0.0, 15.0, 30.0, 40.0, TRAPEZOIDAL)           \
-    X(PELTIER_COOLER_SPEED_MEDIUM, 30.0, 40.0, 60.0, 75.0, TRAPEZOIDAL)        \
-    X(PELTIER_COOLER_SPEED_FAST, 60.0, 75.0, 95.0, 100.0, TRAPEZOIDAL)
+    X(PELTIER_COOLER_SPEED_MEDIUM, 30.0, 50.0, 70.0, 85.0, TRAPEZOIDAL)        \
+    X(PELTIER_COOLER_SPEED_FAST, 70.0, 90.0, 100.0, 105.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierCoolerSpeedMembershipFunctions)
 
 #define PeltierHeaterSpeedMembershipFunctions(X)                               \
     X(PELTIER_HEATER_SPEED_OFF, -10.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
     X(PELTIER_HEATER_SPEED_SLOW, 0.0, 15.0, 30.0, 40.0, TRAPEZOIDAL)           \
-    X(PELTIER_HEATER_SPEED_MEDIUM, 30.0, 40.0, 60.0, 75.0, TRAPEZOIDAL)        \
-    X(PELTIER_HEATER_SPEED_FAST, 60.0, 75.0, 95.0, 100.0, TRAPEZOIDAL)
+    X(PELTIER_HEATER_SPEED_MEDIUM, 30.0, 50.0, 70.0, 85.0, TRAPEZOIDAL)        \
+    X(PELTIER_HEATER_SPEED_FAST, 70.0, 90.0, 100.0, 105.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierHeaterSpeedMembershipFunctions)
 // Define the fuzzy rules
 /*
@@ -170,25 +170,25 @@ FuzzyRule_t rules[] = {
                             VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_FAST)),
 
-    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_VLOW),
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
 
     // Rule 5:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_MEDIUM)),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_FAST)),
 
-    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_VLOW),
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
 
     // Rule 6:
-    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_VLOW),
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_MEDIUM)),
 
-    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_VLOW),
+    PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_OFF)),
     // Rule 7:
@@ -330,8 +330,8 @@ int main() {
             FuzzyClassifier(currentTemperatureChange, &TempChangeState);
 
             // Print the input values and their fuzzy membership values
-            printf("Temperature %0.3f degC\n", currentTemperature);
-            printf("Temp Change %0.3f degC/30s \n\n", currentTemperatureChange);
+            printf("Temperature %0.2f degC\n", currentTemperature);
+            printf("Temp Change %0.2f degC/30s \n\n", currentTemperatureChange);
 
             fuzzyInference(rules, (sizeof(rules) / sizeof(rules[0])));
 
@@ -344,29 +344,29 @@ int main() {
             double output_heater = defuzzification(&PelHeaterSpeed);
 
             setPeltierCoolPower(output_cooler);
-            printf("Cooler Speed: %0.3f: \n", output_cooler);
+            printf("Cooler Speed: %0.2f: \n", output_cooler);
             setPeltierHeatPower(output_heater);
-            printf("Heater Speed: %0.3f: \n", output_heater);
+            printf("Heater Speed: %0.2f: \n", output_heater);
 
             printf("\n====MQTT publisher====\n");
 
-            snprintf(temp_msg, sizeof(temp_msg), "{%.3f}", currentTemperature);
+            snprintf(temp_msg, sizeof(temp_msg), "{temperature:%.2f, temperature_change:%.2f}", currentTemperature, currentTemperatureChange);
             MQTTClient_publish(client, TOPIC_TEMP, strlen(temp_msg), temp_msg,
                                QOS, 0, NULL);
             printf("watertank/temperature: %s degC\n", temp_msg);
 
-            snprintf(temp_change_msg, sizeof(temp_change_msg), "{%.3f}",
+            snprintf(temp_change_msg, sizeof(temp_change_msg), "{temperature_change:%.2f}",
                      currentTemperatureChange);
             MQTTClient_publish(client, TOPIC_TEMP_CHANGE,
                                strlen(temp_change_msg), temp_change_msg, QOS, 0,
                                NULL);
             printf("watertank/temperature_change: %s degC\n", temp_change_msg);
 
-            snprintf(cooler_msg, sizeof(cooler_msg), "{%.3f}", output_cooler);
+            snprintf(cooler_msg, sizeof(cooler_msg), "{%.2f}", output_cooler);
             MQTTClient_publish(client, TOPIC_PELTIER_COOL, strlen(cooler_msg),
                                cooler_msg, QOS, 0, NULL);
             printf("watertank/cooler: %s %\n", cooler_msg);
-            snprintf(heater_msg, sizeof(heater_msg), "{%.3f}", output_heater);
+            snprintf(heater_msg, sizeof(heater_msg), "{%.2f}", output_heater);
             MQTTClient_publish(client, TOPIC_PELTIER_HEAT, strlen(heater_msg),
                                heater_msg, QOS, 0, NULL);
             printf("watertank/heater: %s %\n", heater_msg);
@@ -374,7 +374,7 @@ int main() {
             destroyClassifiers();
         }
 
-        sleep(30); // Sleep for 30 seconds before the next reading
+        sleep(15); // Sleep for 30 seconds before the next reading
     }
 
     MQTTClient_disconnect(client, 10000);
