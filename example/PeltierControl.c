@@ -51,7 +51,7 @@ FuzzySet_t PelHeaterSpeed; // Toc do cua may lam nong
 // Write log to file
 void writeLog(const char *message, float parameter) {
     FILE *f =
-        fopen("Water_Tank_Report.txt", "a"); // Open the file in append mode
+        fopen("Fuzzy_Report_20_30.txt", "a"); // Open the file in append mode
     if (f == NULL) {
         printf("Can not open the file log.\n");
         return;
@@ -109,9 +109,9 @@ void setPeltierHeatPower(int heaterPower) {
 */
 #define TemperatureMembershipFunctions(X)                                      \
     X(TEMPERATURE_VLOW, 0.0, 5.0, 10.0, 17.0, TRAPEZOIDAL)                     \
-    X(TEMPERATURE_LOW, 10.0, 17.0, 25.0, 30.0, TRAPEZOIDAL)                    \
+    X(TEMPERATURE_LOW, 10.0, 17.0, 29.0, 30.0, TRAPEZOIDAL)                    \
     X(TEMPERATURE_MEDIUM, 29.5, 30.0, 30.5, TRIANGULAR)                        \
-    X(TEMPERATURE_HIGH, 30.0, 35.0, 40.0, 100.0, TRAPEZOIDAL)
+    X(TEMPERATURE_HIGH, 30.0, 40.0, 50.0, 100.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TemperatureMembershipFunctions)
 
 #define TempChangeMembershipFunctions(X)                                       \
@@ -124,14 +124,14 @@ DEFINE_FUZZY_MEMBERSHIP(TempChangeMembershipFunctions)
     X(PELTIER_COOLER_SPEED_OFF, -10.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
     X(PELTIER_COOLER_SPEED_SLOW, 0.0, 15.0, 30.0, 40.0, TRAPEZOIDAL)           \
     X(PELTIER_COOLER_SPEED_MEDIUM, 30.0, 50.0, 70.0, 85.0, TRAPEZOIDAL)        \
-    X(PELTIER_COOLER_SPEED_FAST, 70.0, 90.0, 100.0, 105.0, TRAPEZOIDAL)
+    X(PELTIER_COOLER_SPEED_FAST, 95.0, 98.0, 100.0, 105.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierCoolerSpeedMembershipFunctions)
 
 #define PeltierHeaterSpeedMembershipFunctions(X)                               \
     X(PELTIER_HEATER_SPEED_OFF, -10.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
     X(PELTIER_HEATER_SPEED_SLOW, 0.0, 15.0, 30.0, 40.0, TRAPEZOIDAL)           \
     X(PELTIER_HEATER_SPEED_MEDIUM, 30.0, 50.0, 70.0, 85.0, TRAPEZOIDAL)        \
-    X(PELTIER_HEATER_SPEED_FAST, 70.0, 90.0, 100.0, 105.0, TRAPEZOIDAL)
+    X(PELTIER_HEATER_SPEED_FAST, 95.0, 98.0, 100.0, 105.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierHeaterSpeedMembershipFunctions)
 // Define the fuzzy rules
 /*
@@ -186,7 +186,7 @@ FuzzyRule_t rules[] = {
     // Rule 6:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_MEDIUM)),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_FAST)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
@@ -222,11 +222,12 @@ FuzzyRule_t rules[] = {
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_DECREASING))),
-                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_SLOW)),
+                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_MEDIUM)),
     // Rule 11:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
+
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_MEDIUM)),
