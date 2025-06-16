@@ -227,6 +227,7 @@ FuzzyRule_t rules[] = {
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
+
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_MEDIUM)),
@@ -234,6 +235,7 @@ FuzzyRule_t rules[] = {
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_OFF)),
+                
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
                 THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_FAST)),

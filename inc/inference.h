@@ -1,5 +1,3 @@
-
-
  #include "class.h"
  #include "classifier.h"
  #include "membership_function.h"

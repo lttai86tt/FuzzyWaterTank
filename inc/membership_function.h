@@ -1,5 +1,3 @@
-
-
 #ifndef FUZZY_MEMBERSHIP_FUNCTION_H
 #define FUZZY_MEMBERSHIP_FUNCTION_H
 #pragma once

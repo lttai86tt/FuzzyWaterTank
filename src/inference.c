@@ -1,13 +1,3 @@
-/**
- * @file inference.c
- * @brief Fuzzy Logic inference engine implementation.
- * @author Robin Prilliwtz
- * @date 2024
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * See LICENSE.txt file for details.
- *
- */
 
  #include "inference.h"
 

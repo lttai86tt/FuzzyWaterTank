@@ -1,5 +1,3 @@
-
-
 #ifndef FUZZY_C_H
 #define FUZZY_C_H
 #pragma once
