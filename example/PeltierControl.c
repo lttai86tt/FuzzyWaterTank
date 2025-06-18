@@ -51,7 +51,7 @@ FuzzySet_t PelHeaterSpeed; // Toc do cua may lam nong
 // Write log to file
 void writeLog(const char *message, float parameter) {
     FILE *f =
-        fopen("Fuzzy_Report_20_30.txt", "a"); // Open the file in append mode
+        fopen("Fuzzy_Report_20_25.txt", "a"); // Open the file in append mode
     if (f == NULL) {
         printf("Can not open the file log.\n");
         return;
@@ -109,9 +109,9 @@ void setPeltierHeatPower(int heaterPower) {
 */
 #define TemperatureMembershipFunctions(X)                                      \
     X(TEMPERATURE_VLOW, 0.0, 5.0, 10.0, 17.0, TRAPEZOIDAL)                     \
-    X(TEMPERATURE_LOW, 10.0, 17.0, 29.0, 30.0, TRAPEZOIDAL)                    \
-    X(TEMPERATURE_MEDIUM, 29.5, 30.0, 30.5, TRIANGULAR)                        \
-    X(TEMPERATURE_HIGH, 30.0, 40.0, 50.0, 100.0, TRAPEZOIDAL)
+    X(TEMPERATURE_LOW, 10.0, 17.0, 24.0, 25.0, TRAPEZOIDAL)                    \
+    X(TEMPERATURE_MEDIUM, 24.0, 25.0, 25.5, TRIANGULAR)                        \
+    X(TEMPERATURE_HIGH, 25.0, 40.0, 50.0, 100.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TemperatureMembershipFunctions)
 
 #define TempChangeMembershipFunctions(X)                                       \
