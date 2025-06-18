@@ -319,8 +319,9 @@ int main() {
 
             setPeltierCoolPower(0);
             setPeltierHeatPower(0);
-            MQTTClient_publish(client, TOPIC_ERROR, strlen("1"), "1", QOS, 0,
-                               NULL);
+            snprintf(temp_msg, sizeof(temp_msg),
+             "{\"temperature\":\"ERROR\", \"temperature_change\":\"ERROR\"}");
+            MQTTClient_publish(client, TOPIC_TEMP, strlen(temp_msg), temp_msg, QOS, 0, NULL);        
         }
         // allocate memory
         if (control_enabled) {
