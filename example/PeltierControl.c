@@ -36,8 +36,7 @@
 
 // Define the labels for the fuzzy sets (only used for debugging)
 const char *tempLabels[] = {"VCool", "Cool", "Normal", "Hot"};
-const char *changeLabels[] = {"Dec", "Stable",
-                              "Inc"}; // Giam <> On dinh <> Tang
+const char *changeLabels[] = {"Dec", "Stable", "Inc"}; // Giam <> On dinh <> Tang
 const char *peltierSpeedLabels[] = {"Off", "Slow", "Medium", "Fast"};
 
 // Define the input fuzzy sets
@@ -376,7 +375,7 @@ int main() {
             destroyClassifiers();
         }
 
-        sleep(15); // Sleep for 30 seconds before the next reading
+        sleep(5); // Sleep for 5 seconds before the next reading
     }
 
     MQTTClient_disconnect(client, 10000);
