@@ -28,11 +28,11 @@
 #define PASSWORD "Pi123123"
 #define QOS 1
 
-#define TOPIC_TEMP "watertank/temperature"
-#define TOPIC_TEMP_CHANGE "watertank/temperature_change"
-#define TOPIC_ERROR "watertank/error"
-#define TOPIC_PELTIER_COOL "watertank/cooler"
-#define TOPIC_PELTIER_HEAT "watertank/heater"
+#define TOPIC_TEMP "temperature"
+#define TOPIC_TEMP_CHANGE "temperature_change"
+#define TOPIC_ERROR "error"
+#define TOPIC_PELTIER_COOL "cooler"
+#define TOPIC_PELTIER_HEAT "heater"
 
 // Define the labels for the fuzzy sets (only used for debugging)
 const char *tempLabels[] = {"VCool", "Cool", "Normal", "Hot"};
@@ -351,31 +351,31 @@ int main() {
 
             printf("\n====MQTT publisher====\n");
 
-            snprintf(temp_msg, sizeof(temp_msg), "{temperature:%.2f, temperature_change:%.2f}", currentTemperature, currentTemperatureChange);
+            snprintf(temp_msg, sizeof(temp_msg), "{temperature:%.2f}", currentTemperature);
             MQTTClient_publish(client, TOPIC_TEMP, strlen(temp_msg), temp_msg,
                                QOS, 0, NULL);
-            printf("watertank/temperature: %s degC\n", temp_msg);
+            printf("temperature: %s degC\n", temp_msg);
 
             snprintf(temp_change_msg, sizeof(temp_change_msg), "{temperature_change:%.2f}",
                      currentTemperatureChange);
             MQTTClient_publish(client, TOPIC_TEMP_CHANGE,
                                strlen(temp_change_msg), temp_change_msg, QOS, 0,
                                NULL);
-            printf("watertank/temperature_change: %s degC\n", temp_change_msg);
+            printf("temperature_change: %s degC\n", temp_change_msg);
 
             snprintf(cooler_msg, sizeof(cooler_msg), "{%.2f}", output_cooler);
             MQTTClient_publish(client, TOPIC_PELTIER_COOL, strlen(cooler_msg),
                                cooler_msg, QOS, 0, NULL);
-            printf("watertank/cooler: %s %\n", cooler_msg);
+            printf("cooler: %s %\n", cooler_msg);
             snprintf(heater_msg, sizeof(heater_msg), "{%.2f}", output_heater);
             MQTTClient_publish(client, TOPIC_PELTIER_HEAT, strlen(heater_msg),
                                heater_msg, QOS, 0, NULL);
-            printf("watertank/heater: %s %\n", heater_msg);
+            printf("heater: %s %\n", heater_msg);
 
             destroyClassifiers();
         }
 
-        sleep(15); // Sleep for 30 seconds before the next reading
+        sleep(5); // Sleep for 30 seconds before the next reading
     }
 
     MQTTClient_disconnect(client, 10000);
