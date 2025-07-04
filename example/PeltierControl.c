@@ -110,9 +110,9 @@ void setPeltierHeatPower(int heaterPower) {
 */
 #define TemperatureMembershipFunctions(X)                                      \
     X(TEMPERATURE_VLOW, 0.0, 5.0, 10.0, 17.0, TRAPEZOIDAL)                     \
-    X(TEMPERATURE_LOW, 10.0, 17.0, 32.0, 33.0, TRAPEZOIDAL)                    \
-    X(TEMPERATURE_MEDIUM, 32.5, 33.0, 33.5, TRIANGULAR)                        \
-    X(TEMPERATURE_HIGH, 33.0, 40.0, 50.0, 100.0, TRAPEZOIDAL)
+    X(TEMPERATURE_LOW, 10.0, 15.0, 25.0, 30.0, TRAPEZOIDAL)                    \
+    X(TEMPERATURE_MEDIUM, 25.0, 30.0, 35.0, TRIANGULAR)                        \
+    X(TEMPERATURE_HIGH, 30.0, 40.0, 50.0, 100.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TemperatureMembershipFunctions)
 
 #define TempChangeMembershipFunctions(X)                                       \
