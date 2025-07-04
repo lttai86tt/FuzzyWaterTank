@@ -1,8 +1,6 @@
 /**
  * @file PeltierControl.c
  *
- * To-Do:  
- * 1 . testing mqtt broker
  */
 
 #include "MQTTClient.h"
@@ -50,6 +48,27 @@ FuzzySet_t TempChangeState;  // Trang thai thay doi nhiet do
 // Define the output fuzzy set
 FuzzySet_t PelCoolerSpeed; // Toc do cua may lam mat
 FuzzySet_t PelHeaterSpeed; // Toc do cua may lam nong
+
+// Write log to file
+void writeLog(const char *message, float parameter) {
+    FILE *f =
+        fopen("Fuzzy_log.txt", "a"); // Open the file in append mode
+    if (f == NULL) {
+        printf("Can not open the file log.\n");
+        return;
+    }
+
+    // Take the current time
+    time_t t = time(NULL);
+    struct tm *tm_info = localtime(&t);
+
+    char time_str[30];
+    strftime(time_str, 30, "%Y-%m-%d %H:%M:%S", tm_info);
+
+    fprintf(f, "[%s] %s - %.2f\n", time_str, message, parameter);
+    fclose(f);
+}
+
 // Read sensor temperature
 double get_Temperature(const char *sensor_path) {
 
@@ -103,17 +122,17 @@ DEFINE_FUZZY_MEMBERSHIP(TemperatureMembershipFunctions)
 DEFINE_FUZZY_MEMBERSHIP(TempChangeMembershipFunctions)
 //
 #define PeltierCoolerSpeedMembershipFunctions(X)                               \
-    X(PELTIER_COOLER_SPEED_OFF, -20.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
-    X(PELTIER_COOLER_SPEED_SLOW, 00.0, 10.0, 15.0, 25.0, TRAPEZOIDAL)          \
-    X(PELTIER_COOLER_SPEED_MEDIUM, 15.0, 25.0, 30.0, 40.0, TRAPEZOIDAL)        \
-    X(PELTIER_COOLER_SPEED_FAST, 35.0, 45.0, 70.0, 70.0, TRAPEZOIDAL)
+    X(PELTIER_COOLER_SPEED_OFF, -10.0, 0.0, 0.0, 10.0, TRAPEZOIDAL)             \
+    X(PELTIER_COOLER_SPEED_SLOW, 10.0, 30.0, 50.0, 60.0, TRAPEZOIDAL)           \
+    X(PELTIER_COOLER_SPEED_MEDIUM, 50.0, 70.0, 80.0, 90.0, TRAPEZOIDAL)        \
+    X(PELTIER_COOLER_SPEED_FAST, 85.0, 90.0, 100.0, 125.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierCoolerSpeedMembershipFunctions)
 
 #define PeltierHeaterSpeedMembershipFunctions(X)                               \
-    X(PELTIER_HEATER_SPEED_OFF, -20.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
-    X(PELTIER_HEATER_SPEED_SLOW, 00.0, 10.0, 15.0, 25.0, TRAPEZOIDAL)          \
-    X(PELTIER_HEATER_SPEED_MEDIUM, 15.0, 25.0, 30.0, 40.0, TRAPEZOIDAL)        \
-    X(PELTIER_HEATER_SPEED_FAST, 35.0, 45.0, 70.0, 70.0, TRAPEZOIDAL)
+    X(PELTIER_HEATER_SPEED_OFF, -10.0, 0.0, 0.0, 10.0, TRAPEZOIDAL)             \
+    X(PELTIER_HEATER_SPEED_SLOW, 10.0, 30.0, 50.0, 60.0, TRAPEZOIDAL)           \
+    X(PELTIER_HEATER_SPEED_MEDIUM, 50.0, 70.0, 80.0, 90.0, TRAPEZOIDAL)        \
+    X(PELTIER_HEATER_SPEED_FAST, 85.0, 90.0, 100.0, 125.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierHeaterSpeedMembershipFunctions)
 // Define the fuzzy rules
 /*
@@ -310,10 +329,13 @@ int main() {
         if (control_enabled) {
             createClassifiers();
 
-        FuzzyClassifier(currentTemperature, &TemperatureState);
-        FuzzyClassifier(currentTemperatureChange, &TempChangeState);
-        printf("Temperature %0.3f degC\n", currentTemperature);
-        printf("Temp Change %0.3f degC/1 min \n\n", currentTemperatureChange);
+            // Set the input values for the fuzzy classifiers
+            FuzzyClassifier(currentTemperature, &TemperatureState);
+            FuzzyClassifier(currentTemperatureChange, &TempChangeState);
+
+            // Print the input values and their fuzzy membership values
+            printf("Temperature %0.2f degC\n", currentTemperature);
+            printf("Temp Change %0.2f degC/5s \n\n", currentTemperatureChange);
 
             fuzzyInference(rules, (sizeof(rules) / sizeof(rules[0])));
 
