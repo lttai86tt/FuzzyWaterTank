@@ -1,11 +1,20 @@
-
+ /**
+ * @file membership_function.h
+ * @brief Fuzzy Logic membership function header.
+ * @author Robin Prilliwtz
+ * @date 2024
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * See LICENSE.txt file for details.
+ *
+ */
 
  #include "class.h"
  #include "classifier.h"
  #include "membership_function.h"
  
  #include <stdbool.h>
- 
+
  #ifndef FUZZY_INFERENCE_H
  #define FUZZY_INFERENCE_H
  #pragma once
