@@ -1,11 +1,3 @@
-<p align="center">
-    <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="./assets/SVG/Dark-Logo.svg">
-        <source media="(prefers-color-scheme: light)" srcset="./assets/SVG/Bright-Logo.svg">
-        <img alt="Fuzzy C Logoo" width="500" src="./assets/SVG/Bright-Logo.svg">
-    </picture>
-</p>
-
 # Fuzzy Logic in C
 
 A [fuzzy logic](https://en.wikipedia.org/wiki/Fuzzy_logic) Mamdani-like implementation in C.
@@ -84,20 +76,8 @@ mingw32-make clean
 #stop
 Ctrl + C 
 ```
-
-You can then plot a simple surface of the fan controller example using the provided python script:
-```bash
-python -m venv ./venv
-source ./venv/bin/activate
-pip install -r requirements.txt
-python ./plot.py
 ```
 > [!NOTE]
 > This visualization does not represent the entire controller due to its non-linear behavior.
-> To fully represent this model you need a five-dimensional vector space.
-> ![./assets/controller-figure.png](./assets/controller-figure.png)
 
-## legal
 
-Licensed under the Apache License, Version 2.0 (the "License"); <br>
-See [LICENSE.txt](LICENSE.txt) file for details.
