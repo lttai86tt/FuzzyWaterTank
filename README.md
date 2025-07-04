@@ -1,11 +1,3 @@
-<p align="center">
-    <picture>
-        <source media="(prefers-color-scheme: dark)" srcset="./assets/SVG/Dark-Logo.svg">
-        <source media="(prefers-color-scheme: light)" srcset="./assets/SVG/Bright-Logo.svg">
-        <img alt="Fuzzy C Logoo" width="500" src="./assets/SVG/Bright-Logo.svg">
-    </picture>
-</p>
-
 # Fuzzy Logic in C
 
 A [fuzzy logic](https://en.wikipedia.org/wiki/Fuzzy_logic) Mamdani-like implementation in C.
@@ -85,7 +77,4 @@ mingw32-make clean
 Ctrl + C 
 ```
 
-## legal
 
-Licensed under the Apache License, Version 2.0 (the "License"); <br>
-See [LICENSE.txt](LICENSE.txt) file for details.
