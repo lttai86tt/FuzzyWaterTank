@@ -114,6 +114,10 @@ void setPeltierHeatPower(int heaterPower) {
     X(TEMPERATURE_HIGH, 30.0, 32.0, 50.0, 100.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TemperatureMembershipFunctions)
 
+/*
+=========> X(TemChange is error)
+*/
+
 #define TempChangeMembershipFunctions(X)                                       \
     X(TEMP_CHANGE_DECREASING, -100.0, -10.0, -1.0, 0.0, TRAPEZOIDAL)           \
     X(TEMP_CHANGE_STABLE, -1.0, 0.0, 1.0, TRIANGULAR)                          \
@@ -324,6 +328,7 @@ int main() {
                                NULL);
         }
         // allocate memory
+
         if (control_enabled) {
             createClassifiers();
 
@@ -377,7 +382,6 @@ int main() {
         }
 
         sleep(5); // Sleep for 30 seconds before the next reading
-    }
 
     MQTTClient_disconnect(client, 10000);
     MQTTClient_destroy(&client);
