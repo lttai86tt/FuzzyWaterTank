@@ -362,7 +362,7 @@ int main() {
                                QOS, 0, NULL);
             printf("temperature: %s degC\n", temp_msg);
 
-            snprintf(temp_change_msg, sizeof(temp_change_msg), "{temperature_change:%.2f}",
+            snprintf(temp_change_msg, sizeof(temp_change_msg), "{temperature_change:%.1f}",
                      currentTemperatureChange);
             MQTTClient_publish(client, TOPIC_TEMP_CHANGE,
                                strlen(temp_change_msg), temp_change_msg, QOS, 0,
