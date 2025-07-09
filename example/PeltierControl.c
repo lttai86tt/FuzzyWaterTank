@@ -22,14 +22,14 @@
 
 // MQTT Broker
 #define MQTT_ADDRESS                                                           \
-    "ssl://eab5d59939f54918ad1cc5129f7a2fd8.s1.eu.hivemq.cloud:8883"
+    "ssl://07db9ca7573a4f9592a5c2673617fd93.s1.eu.hivemq.cloud:8883"
 #define MQTT_CLIENTID "WaterTank"
-#define USERNAME "WaterTank_Pi"
-#define PASSWORD "Pi123123"
+#define USERNAME "Watertank"
+#define PASSWORD "Pi12345678"
 #define QOS 1
 
 #define TOPIC_TEMP "temperature"
-#define TOPIC_TEMP_CHANGE "temperature_change"
+#define TOPIC_TEMP_CHANGE "temperaturechange"
 #define TOPIC_ERROR "error"
 #define TOPIC_PELTIER_COOL "cooler"
 #define TOPIC_PELTIER_HEAT "heater"
@@ -51,7 +51,7 @@ FuzzySet_t PelHeaterSpeed; // Toc do cua may lam nong
 // Write log to file
 void writeLog(const char *message, float parameter) {
     FILE *f =
-        fopen("Fuzzy_test.txt", "a"); // Open the file in append mode
+        fopen("Fuzzy_20_25.txt", "a"); // Open the file in append mode
     if (f == NULL) {
         printf("Can not open the file log.\n");
         return;
@@ -108,10 +108,10 @@ void setPeltierHeatPower(int heaterPower) {
    // RECTANGULAR: Chu Nhat
 */
 #define TemperatureMembershipFunctions(X)                                      \
-    X(TEMPERATURE_VLOW, 0.0, 5.0, 10.0, 17.0, TRAPEZOIDAL)                     \
-    X(TEMPERATURE_LOW, 10.0, 17.0, 32.0, 33.0, TRAPEZOIDAL)                    \
-    X(TEMPERATURE_MEDIUM, 32.5, 33.0, 33.5, TRIANGULAR)                        \
-    X(TEMPERATURE_HIGH, 33.0, 40.0, 50.0, 100.0, TRAPEZOIDAL)
+    X(TEMPERATURE_VLOW, 0.0, 5.0, 25.0, 28.0, TRAPEZOIDAL)                     \
+    X(TEMPERATURE_LOW, 20.0, 25.0, 28.0, 30.0, TRAPEZOIDAL)                    \
+    X(TEMPERATURE_MEDIUM, 29.5, 30.0, 30.3, TRIANGULAR)                        \
+    X(TEMPERATURE_HIGH, 30.0, 32.0, 50.0, 100.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(TemperatureMembershipFunctions)
 
 #define TempChangeMembershipFunctions(X)                                       \
@@ -121,17 +121,17 @@ DEFINE_FUZZY_MEMBERSHIP(TemperatureMembershipFunctions)
 DEFINE_FUZZY_MEMBERSHIP(TempChangeMembershipFunctions)
 //
 #define PeltierCoolerSpeedMembershipFunctions(X)                               \
-    X(PELTIER_COOLER_SPEED_OFF, -10.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
-    X(PELTIER_COOLER_SPEED_SLOW, 0.0, 20.0, 30.0, 40.0, TRAPEZOIDAL)           \
-    X(PELTIER_COOLER_SPEED_MEDIUM, 30.0, 50.0, 70.0, 85.0, TRAPEZOIDAL)        \
-    X(PELTIER_COOLER_SPEED_FAST, 85.0, 90.0, 100.0, 110.0, TRAPEZOIDAL)
+    X(PELTIER_COOLER_SPEED_OFF, -10.0, 0.0, 0.0, 10.0, TRAPEZOIDAL)             \
+    X(PELTIER_COOLER_SPEED_SLOW, 10.0, 30.0, 60.0, 70.0, TRAPEZOIDAL)           \
+    X(PELTIER_COOLER_SPEED_MEDIUM, 50.0, 70.0, 80.0, 90.0, TRAPEZOIDAL)        \
+    X(PELTIER_COOLER_SPEED_FAST, 85.0, 90.0, 100.0, 125.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierCoolerSpeedMembershipFunctions)
 
 #define PeltierHeaterSpeedMembershipFunctions(X)                               \
-    X(PELTIER_HEATER_SPEED_OFF, -10.0, 0.0, 0.0, 0.0, TRAPEZOIDAL)             \
-    X(PELTIER_HEATER_SPEED_SLOW, 0.0, 20.0, 30.0, 40.0, TRAPEZOIDAL)           \
-    X(PELTIER_HEATER_SPEED_MEDIUM, 30.0, 50.0, 70.0, 85.0, TRAPEZOIDAL)        \
-    X(PELTIER_HEATER_SPEED_FAST, 85.0, 90.0, 100.0, 110.0, TRAPEZOIDAL)
+    X(PELTIER_HEATER_SPEED_OFF, -10.0, 0.0, 0.0, 10.0, TRAPEZOIDAL)             \
+    X(PELTIER_HEATER_SPEED_SLOW, 10.0, 30.0, 60.0, 70.0, TRAPEZOIDAL)           \
+    X(PELTIER_HEATER_SPEED_MEDIUM, 50.0, 70.0, 80.0, 90.0, TRAPEZOIDAL)        \
+    X(PELTIER_HEATER_SPEED_FAST, 85.0, 90.0, 100.0, 125.0, TRAPEZOIDAL)
 DEFINE_FUZZY_MEMBERSHIP(PeltierHeaterSpeedMembershipFunctions)
 // Define the fuzzy rules
 /*
@@ -186,7 +186,7 @@ FuzzyRule_t rules[] = {
     // Rule 6:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
-                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_FAST)),
+                THEN(PelHeaterSpeed, PELTIER_HEATER_SPEED_MEDIUM)),
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_LOW),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
@@ -230,7 +230,7 @@ FuzzyRule_t rules[] = {
 
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_STABLE))),
-                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_MEDIUM)),
+                THEN(PelCoolerSpeed, PELTIER_COOLER_SPEED_FAST)),
     // Rule 12:
     PROPOSITION(WHEN(ALL_OF(VAR(TemperatureState, TEMPERATURE_HIGH),
                             VAR(TempChangeState, TEMP_CHANGE_INCREASING))),
@@ -332,8 +332,8 @@ int main() {
             FuzzyClassifier(currentTemperatureChange, &TempChangeState);
 
             // Print the input values and their fuzzy membership values
-            printf("Temperature %0.2f degC\n", currentTemperature);
-            printf("Temp Change %0.2f degC/30s \n\n", currentTemperatureChange);
+            printf("Temperature %0.1f degC\n", currentTemperature);
+            printf("Temp Change %0.1f degC/30s \n\n", currentTemperatureChange);
 
             fuzzyInference(rules, (sizeof(rules) / sizeof(rules[0])));
 
@@ -346,13 +346,13 @@ int main() {
             double output_heater = defuzzification(&PelHeaterSpeed);
 
             setPeltierCoolPower(output_cooler);
-            printf("Cooler Speed: %0.2f: \n", output_cooler);
+            printf("Cooler Speed: %0.1f: \n", output_cooler);
             setPeltierHeatPower(output_heater);
-            printf("Heater Speed: %0.2f: \n", output_heater);
+            printf("Heater Speed: %0.1f: \n", output_heater);
 
             printf("\n====MQTT publisher====\n");
 
-            snprintf(temp_msg, sizeof(temp_msg), "{temperature:%.2f}", currentTemperature);
+            snprintf(temp_msg, sizeof(temp_msg), "{temperature:%.1f}", currentTemperature);
             MQTTClient_publish(client, TOPIC_TEMP, strlen(temp_msg), temp_msg,
                                QOS, 0, NULL);
             printf("temperature: %s degC\n", temp_msg);
@@ -364,11 +364,11 @@ int main() {
                                NULL);
             printf("temperature_change: %s degC\n", temp_change_msg);
 
-            snprintf(cooler_msg, sizeof(cooler_msg), "{%.2f}", output_cooler);
+            snprintf(cooler_msg, sizeof(cooler_msg), "{%.1f}", output_cooler);
             MQTTClient_publish(client, TOPIC_PELTIER_COOL, strlen(cooler_msg),
                                cooler_msg, QOS, 0, NULL);
             printf("cooler: %s %\n", cooler_msg);
-            snprintf(heater_msg, sizeof(heater_msg), "{%.2f}", output_heater);
+            snprintf(heater_msg, sizeof(heater_msg), "{%.1f}", output_heater);
             MQTTClient_publish(client, TOPIC_PELTIER_HEAT, strlen(heater_msg),
                                heater_msg, QOS, 0, NULL);
             printf("heater: %s %\n", heater_msg);
